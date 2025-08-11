@@ -127,9 +127,12 @@ async function createVentHoles(
   
     // Create 4 rectangular holes on each side, tilted 45 degrees
   const holeWidth = 4; // 4mm wide
-  const holeHeight = 12; // 12mm tall (3x wider than height)
+  const holeHeight = 12; // 12mm tall
   const holeSpacing = 15; // 15mm between hole centers
   const marginFromEdge = 10; // 10mm from edges
+  
+  // Calculate 45-degree tilt offset (tan(45°) = 1, so offset = holeHeight)
+  const tiltOffset = holeHeight; // This creates a true 45-degree angle
   
   // Create 4 holes on left side
   for (let i = 0; i < 2; i++) {
@@ -138,12 +141,12 @@ async function createVentHoles(
       const y = -depth / 2 + marginFromEdge + i * holeSpacing;
       const z = bottom + marginFromEdge + j * holeSpacing;
       
-      // Create a tilted rectangle cross-section for left side
+      // Create a 45-degree tilted rectangle cross-section for left side
       const leftHole = new manifold.CrossSection([
         [-holeWidth/2, -holeHeight/2], // Bottom left
         [holeWidth/2, -holeHeight/2], // Bottom right
-        [holeWidth/2 + holeHeight/2, holeHeight/2], // Top right (tilted)
-        [-holeWidth/2 + holeHeight/2, holeHeight/2] // Top left (tilted)
+        [holeWidth/2 + tiltOffset, holeHeight/2], // Top right (45° tilted)
+        [-holeWidth/2 + tiltOffset, holeHeight/2] // Top left (45° tilted)
       ]).extrude(wall + 2)
         .rotate(0, 90, 0) // Rotate around Y-axis to face left
         .translate(x, y, z);
@@ -158,12 +161,12 @@ async function createVentHoles(
       const y = -depth / 2 + marginFromEdge + i * holeSpacing;
       const z = bottom + marginFromEdge + j * holeSpacing;
       
-      // Create a tilted rectangle cross-section for right side (opposite tilt)
+      // Create a 45-degree tilted rectangle cross-section for right side (opposite tilt)
       const rightHole = new manifold.CrossSection([
         [-holeWidth/2, -holeHeight/2], // Bottom left
         [holeWidth/2, -holeHeight/2], // Bottom right
-        [holeWidth/2 - holeHeight/2, holeHeight/2], // Top right (tilted opposite)
-        [-holeWidth/2 - holeHeight/2, holeHeight/2] // Top left (tilted opposite)
+        [holeWidth/2 - tiltOffset, holeHeight/2], // Top right (45° tilted opposite)
+        [-holeWidth/2 - tiltOffset, holeHeight/2] // Top left (45° tilted opposite)
       ]).extrude(wall + 2)
         .rotate(0, -90, 0) // Rotate around Y-axis to face right
         .translate(x, y, z);
@@ -178,12 +181,12 @@ async function createVentHoles(
       const y = depth / 2 + 1;
       const z = bottom + marginFromEdge + j * holeSpacing;
       
-      // Create a tilted rectangle cross-section for front side
+      // Create a 45-degree tilted rectangle cross-section for front side
       const frontHole = new manifold.CrossSection([
         [-holeWidth/2, -holeHeight/2], // Bottom left
         [holeWidth/2, -holeHeight/2], // Bottom right
-        [holeWidth/2 + holeHeight/2, holeHeight/2], // Top right (tilted)
-        [-holeWidth/2 + holeHeight/2, holeHeight/2] // Top left (tilted)
+        [holeWidth/2 + tiltOffset, holeHeight/2], // Top right (45° tilted)
+        [-holeWidth/2 + tiltOffset, holeHeight/2] // Top left (45° tilted)
       ]).extrude(wall + 2)
         .rotate(90, 0, 0) // Rotate around X-axis to face front
         .translate(x, y, z);
@@ -193,7 +196,7 @@ async function createVentHoles(
   
   // NO BACK SIDE HOLES - back side has connectors and should remain untouched
   
-  console.log("Created one rectangular hole on each side:", ventHoles.length);
+  console.log("Created 45-degree slash-shaped vent holes:", ventHoles.length);
   
   return ventHoles;
 }
