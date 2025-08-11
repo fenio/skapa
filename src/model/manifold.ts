@@ -163,7 +163,7 @@ async function createVentHoles(
   // Calculate optimal parameters for each side
   const frontParams = calculateOptimalSize(Math.max(availableWidth, minAvailableSpace), 2);
   const sideParams = calculateOptimalSize(Math.max(availableDepth, minAvailableSpace), 2);
-  const heightParams = calculateOptimalSize(Math.max(availableHeight, minAvailableSpace), 2);
+  const heightParams = calculateOptimalSize(Math.max(availableHeight, minAvailableSpace), 1); // More aggressive for height
   
   // Use the smaller of front/side hole sizes for consistency
   const holeWidth = Math.min(frontParams.holeSize, sideParams.holeSize);
@@ -177,6 +177,9 @@ async function createVentHoles(
   const holesPerWidth = frontParams.holes;
   const holesPerDepth = sideParams.holes;
   const holesPerHeight = heightParams.holes;
+  
+  // Front side can be more aggressive with height since it has more space
+  const frontHolesPerHeight = Math.max(holesPerHeight, Math.floor(availableHeight / holeSpacing));
   
   // Calculate consistent base height for all sides
   const baseHeight = bottom + marginFromEdge + 2; // Start holes lower
@@ -223,7 +226,7 @@ async function createVentHoles(
   
   // Create holes on front side (width x height grid)
   for (let i = 0; i < holesPerWidth; i++) {
-    for (let j = 0; j < holesPerHeight; j++) {
+    for (let j = 0; j < frontHolesPerHeight; j++) {
       const x = -width / 2 + marginFromEdge + i * holeSpacing;
       const y = depth / 2 + 1;
       const z = baseHeight + j * holeSpacing - holeHeight/2; // Adjust for rotation offset
