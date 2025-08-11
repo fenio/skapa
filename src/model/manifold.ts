@@ -145,6 +145,15 @@ async function createVentHoles(
     const optimalSpacing = Math.min(maxSpacing, Math.max(minSpacing, availableSpace / maxHoles));
     const optimalHoleSize = Math.min(maxHoleWidth, Math.max(minHoleWidth, optimalSpacing * 0.3));
     const actualHoles = Math.max(minHoles, Math.floor(availableSpace / optimalSpacing));
+    
+    // Ensure holes don't extend beyond the wall boundaries
+    const totalHoleSpace = (actualHoles - 1) * optimalSpacing + optimalHoleSize;
+    if (totalHoleSpace > availableSpace) {
+      // Reduce number of holes if they don't fit
+      const maxFittingHoles = Math.max(minHoles, Math.floor((availableSpace - optimalHoleSize) / optimalSpacing) + 1);
+      return { holeSize: optimalHoleSize, spacing: optimalSpacing, holes: maxFittingHoles };
+    }
+    
     return { holeSize: optimalHoleSize, spacing: optimalSpacing, holes: actualHoles };
   };
   
@@ -176,16 +185,28 @@ async function createVentHoles(
       const y = -depth / 2 + marginFromEdge + i * holeSpacing;
       const z = baseHeight + j * holeSpacing;
       
-      // Create a 45-degree tilted rectangle cross-section for left side
-      const leftHole = new manifold.CrossSection([
-        [-holeWidth/2, -holeHeight/2], // Bottom left
-        [holeWidth/2, -holeHeight/2], // Bottom right
-        [holeWidth/2 + tiltOffset, holeHeight/2], // Top right (45° tilted)
-        [-holeWidth/2 + tiltOffset, holeHeight/2] // Top left (45° tilted)
-      ]).extrude(wall + 2)
-        .rotate(0, 90, 0) // Rotate around Y-axis to face left
-        .translate(x, y, z);
-      ventHoles.push(leftHole);
+      // Check if hole would extend beyond wall boundaries
+      const holeBottom = z - holeHeight/2;
+      const holeTop = z + holeHeight/2 + tiltOffset;
+      const holeStart = y - holeWidth/2;
+      const holeEnd = y + holeWidth/2;
+      
+      if (holeBottom >= bottom + marginFromEdge && 
+          holeTop <= height - marginFromEdge &&
+          holeStart >= -depth/2 + marginFromEdge && 
+          holeEnd <= depth/2 - marginFromEdge) {
+        
+        // Create a 45-degree tilted rectangle cross-section for left side
+        const leftHole = new manifold.CrossSection([
+          [-holeWidth/2, -holeHeight/2], // Bottom left
+          [holeWidth/2, -holeHeight/2], // Bottom right
+          [holeWidth/2 + tiltOffset, holeHeight/2], // Top right (45° tilted)
+          [-holeWidth/2 + tiltOffset, holeHeight/2] // Top left (45° tilted)
+        ]).extrude(wall + 2)
+          .rotate(0, 90, 0) // Rotate around Y-axis to face left
+          .translate(x, y, z);
+        ventHoles.push(leftHole);
+      }
     }
   }
   
@@ -196,16 +217,28 @@ async function createVentHoles(
       const y = -depth / 2 + marginFromEdge + i * holeSpacing;
       const z = baseHeight + j * holeSpacing;
       
-      // Create a 45-degree tilted rectangle cross-section for right side (opposite tilt)
-      const rightHole = new manifold.CrossSection([
-        [-holeWidth/2, -holeHeight/2], // Bottom left
-        [holeWidth/2, -holeHeight/2], // Bottom right
-        [holeWidth/2 - tiltOffset, holeHeight/2], // Top right (45° tilted opposite)
-        [-holeWidth/2 - tiltOffset, holeHeight/2] // Top left (45° tilted opposite)
-      ]).extrude(wall + 2)
-        .rotate(0, -90, 0) // Rotate around Y-axis to face right
-        .translate(x, y, z);
-      ventHoles.push(rightHole);
+      // Check if hole would extend beyond wall boundaries
+      const holeBottom = z - holeHeight/2;
+      const holeTop = z + holeHeight/2 + tiltOffset;
+      const holeStart = y - holeWidth/2;
+      const holeEnd = y + holeWidth/2;
+      
+      if (holeBottom >= bottom + marginFromEdge && 
+          holeTop <= height - marginFromEdge &&
+          holeStart >= -depth/2 + marginFromEdge && 
+          holeEnd <= depth/2 - marginFromEdge) {
+        
+        // Create a 45-degree tilted rectangle cross-section for right side (opposite tilt)
+        const rightHole = new manifold.CrossSection([
+          [-holeWidth/2, -holeHeight/2], // Bottom left
+          [holeWidth/2, -holeHeight/2], // Bottom right
+          [holeWidth/2 - tiltOffset, holeHeight/2], // Top right (45° tilted opposite)
+          [-holeWidth/2 - tiltOffset, holeHeight/2] // Top left (45° tilted opposite)
+        ]).extrude(wall + 2)
+          .rotate(0, -90, 0) // Rotate around Y-axis to face right
+          .translate(x, y, z);
+        ventHoles.push(rightHole);
+      }
     }
   }
   
@@ -216,16 +249,28 @@ async function createVentHoles(
       const y = depth / 2 + 1;
       const z = baseHeight + j * holeSpacing - holeHeight/2; // Adjust for rotation offset
       
-      // Create a 45-degree tilted rectangle cross-section for front side
-      const frontHole = new manifold.CrossSection([
-        [-holeWidth/2, -holeHeight/2], // Bottom left
-        [holeWidth/2, -holeHeight/2], // Bottom right
-        [holeWidth/2 + tiltOffset, holeHeight/2], // Top right (45° tilted)
-        [-holeWidth/2 + tiltOffset, holeHeight/2] // Top left (45° tilted)
-      ]).extrude(wall + 2)
-        .rotate(90, 0, 0) // Rotate around X-axis to face front
-        .translate(x, y, z);
-      ventHoles.push(frontHole);
+      // Check if hole would extend beyond wall boundaries
+      const holeBottom = z - holeHeight/2;
+      const holeTop = z + holeHeight/2 + tiltOffset;
+      const holeStart = x - holeWidth/2;
+      const holeEnd = x + holeWidth/2;
+      
+      if (holeBottom >= bottom + marginFromEdge && 
+          holeTop <= height - marginFromEdge &&
+          holeStart >= -width/2 + marginFromEdge && 
+          holeEnd <= width/2 - marginFromEdge) {
+        
+        // Create a 45-degree tilted rectangle cross-section for front side
+        const frontHole = new manifold.CrossSection([
+          [-holeWidth/2, -holeHeight/2], // Bottom left
+          [holeWidth/2, -holeHeight/2], // Bottom right
+          [holeWidth/2 + tiltOffset, holeHeight/2], // Top right (45° tilted)
+          [-holeWidth/2 + tiltOffset, holeHeight/2] // Top left (45° tilted)
+        ]).extrude(wall + 2)
+          .rotate(90, 0, 0) // Rotate around X-axis to face front
+          .translate(x, y, z);
+        ventHoles.push(frontHole);
+      }
     }
   }
   
