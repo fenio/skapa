@@ -125,8 +125,9 @@ async function createVentHoles(
   
   const ventHoles: Manifold[] = [];
   
-    // Create 4 square holes on each side
-  const holeSize = 6; // 6mm square holes (smaller to fit 4)
+    // Create 4 rectangular holes on each side, tilted 45 degrees
+  const holeWidth = 4; // 4mm wide
+  const holeHeight = 12; // 12mm tall (3x wider than height)
   const holeSpacing = 15; // 15mm between hole centers
   const marginFromEdge = 10; // 10mm from edges
   
@@ -138,12 +139,13 @@ async function createVentHoles(
       const z = bottom + marginFromEdge + j * holeSpacing;
       
       const leftHole = new manifold.CrossSection([
-        [-holeSize/2, -holeSize/2],
-        [holeSize/2, -holeSize/2],
-        [holeSize/2, holeSize/2],
-        [-holeSize/2, holeSize/2]
+        [-holeWidth/2, -holeHeight/2],
+        [holeWidth/2, -holeHeight/2],
+        [holeWidth/2, holeHeight/2],
+        [-holeWidth/2, holeHeight/2]
       ]).extrude(wall + 2)
         .rotate(0, 90, 0) // Rotate around Y-axis to face left
+        .rotate(0, 0, 45) // Tilt 45 degrees
         .translate(x, y, z);
       ventHoles.push(leftHole);
     }
@@ -157,12 +159,13 @@ async function createVentHoles(
       const z = bottom + marginFromEdge + j * holeSpacing;
       
       const rightHole = new manifold.CrossSection([
-        [-holeSize/2, -holeSize/2],
-        [holeSize/2, -holeSize/2],
-        [holeSize/2, holeSize/2],
-        [-holeSize/2, holeSize/2]
+        [-holeWidth/2, -holeHeight/2],
+        [holeWidth/2, -holeHeight/2],
+        [holeWidth/2, holeHeight/2],
+        [-holeWidth/2, holeHeight/2]
       ]).extrude(wall + 2)
         .rotate(0, -90, 0) // Rotate around Y-axis to face right
+        .rotate(0, 0, -45) // Tilt -45 degrees (opposite direction)
         .translate(x, y, z);
       ventHoles.push(rightHole);
     }
@@ -176,12 +179,13 @@ async function createVentHoles(
       const z = bottom + marginFromEdge + j * holeSpacing;
       
       const frontHole = new manifold.CrossSection([
-        [-holeSize/2, -holeSize/2],
-        [holeSize/2, -holeSize/2],
-        [holeSize/2, holeSize/2],
-        [-holeSize/2, holeSize/2]
+        [-holeWidth/2, -holeHeight/2],
+        [holeWidth/2, -holeHeight/2],
+        [holeWidth/2, holeHeight/2],
+        [-holeWidth/2, holeHeight/2]
       ]).extrude(wall + 2)
         .rotate(90, 0, 0) // Rotate around X-axis to face front
+        .rotate(0, 0, 45) // Tilt 45 degrees
         .translate(x, y, z);
       ventHoles.push(frontHole);
     }
