@@ -129,7 +129,7 @@ async function createVentHoles(
   const holeWidth = 8; // 8mm wide
   const holeHeight = 15; // 15mm tall
   
-  // Left side - one simple rectangular hole (test only)
+  // Left side - one simple rectangular hole
   const leftHole = new manifold.CrossSection([
     [-holeWidth/2, -holeHeight/2],
     [holeWidth/2, -holeHeight/2],
@@ -139,6 +139,28 @@ async function createVentHoles(
     .rotate(90, 0, 0) // Rotate to face the left side
     .translate(-width / 2 - 1, 0, height / 2);
   ventHoles.push(leftHole);
+  
+  // Right side - one simple rectangular hole
+  const rightHole = new manifold.CrossSection([
+    [-holeWidth/2, -holeHeight/2],
+    [holeWidth/2, -holeHeight/2],
+    [holeWidth/2, holeHeight/2],
+    [-holeWidth/2, holeHeight/2]
+  ]).extrude(wall + 2)
+    .rotate(90, 0, 0) // Rotate to face the right side
+    .translate(width / 2 + 1, 0, height / 2);
+  ventHoles.push(rightHole);
+  
+  // Front side - one simple rectangular hole
+  const frontHole = new manifold.CrossSection([
+    [-holeWidth/2, -holeHeight/2],
+    [holeWidth/2, -holeHeight/2],
+    [holeWidth/2, holeHeight/2],
+    [-holeWidth/2, holeHeight/2]
+  ]).extrude(wall + 2)
+    .rotate(0, 90, 0) // Rotate to face the front side
+    .translate(0, depth / 2 + 1, height / 2);
+  ventHoles.push(frontHole);
   
   // NO BACK SIDE HOLES - back side has connectors and should remain untouched
   
