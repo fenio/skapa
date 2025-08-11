@@ -113,6 +113,77 @@ export async function clips(
   return [clipR.trimByPlane(n, 0), clipL.trimByPlane(n, 0)];
 }
 
+// Create vent holes on the sides of the box
+async function createVentHoles(
+  height: number,
+  width: number,
+  depth: number,
+  wall: number,
+  bottom: number,
+): Promise<Manifold[]> {
+  const { Manifold } = await ManifoldModule.get();
+  
+  const ventHoles: Manifold[] = [];
+  const holeRadius = 2; // 4mm diameter holes
+  const holeSpacing = 12; // 12mm between hole centers
+  const marginFromEdge = 8; // 8mm from edges
+  
+  // Calculate how many holes we can fit on each side
+  const availableHeight = height - bottom - 2 * marginFromEdge;
+  const availableWidth = width - 2 * marginFromEdge;
+  const availableDepth = depth - 2 * marginFromEdge;
+  
+  const holesPerHeight = Math.floor(availableHeight / holeSpacing);
+  const holesPerWidth = Math.floor(availableWidth / holeSpacing);
+  const holesPerDepth = Math.floor(availableDepth / holeSpacing);
+  
+  // Create holes on the left and right sides (X faces)
+  for (let h = 0; h < holesPerHeight; h++) {
+    for (let d = 0; d < holesPerDepth; d++) {
+      const y = -depth / 2 + marginFromEdge + d * holeSpacing;
+      const z = bottom + marginFromEdge + h * holeSpacing;
+      
+      // Left side hole
+      const leftHole = new Manifold()
+        .cylinder(holeRadius, wall + 1, 0, 0)
+        .rotate(90, 0, 0)
+        .translate(-width / 2 - 0.5, y, z);
+      ventHoles.push(leftHole);
+      
+      // Right side hole
+      const rightHole = new Manifold()
+        .cylinder(holeRadius, wall + 1, 0, 0)
+        .rotate(90, 0, 0)
+        .translate(width / 2 + 0.5, y, z);
+      ventHoles.push(rightHole);
+    }
+  }
+  
+  // Create holes on the front and back sides (Y faces)
+  for (let h = 0; h < holesPerHeight; h++) {
+    for (let w = 0; w < holesPerWidth; w++) {
+      const x = -width / 2 + marginFromEdge + w * holeSpacing;
+      const z = bottom + marginFromEdge + h * holeSpacing;
+      
+      // Front side hole
+      const frontHole = new Manifold()
+        .cylinder(holeRadius, wall + 1, 0, 0)
+        .rotate(0, 90, 0)
+        .translate(x, -depth / 2 - 0.5, z);
+      ventHoles.push(frontHole);
+      
+      // Back side hole
+      const backHole = new Manifold()
+        .cylinder(holeRadius, wall + 1, 0, 0)
+        .rotate(0, 90, 0)
+        .translate(x, depth / 2 + 0.5, z);
+      ventHoles.push(backHole);
+    }
+  }
+  
+  return ventHoles;
+}
+
 // The box (without clips) with origin in the middle of the bottom face
 export async function base(
   height: number,
@@ -132,7 +203,18 @@ export async function base(
     .extrude(height - bottom)
     .translate([0, 0, bottom]);
 
-  return outer.subtract(innerNeg);
+  // Create vent holes
+  const ventHoles = await createVentHoles(height, width, depth, wall, bottom);
+  
+  // Start with the basic box
+  let result = outer.subtract(innerNeg);
+  
+  // Subtract all vent holes
+  for (const hole of ventHoles) {
+    result = result.subtract(hole);
+  }
+
+  return result;
 }
 
 // The box (with clips), with origin where clips meet the box
