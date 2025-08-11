@@ -126,23 +126,45 @@ async function createVentHoles(
   const ventHoles: Manifold[] = [];
   
     // Create dynamic vent holes based on box size
-  const holeWidth = 4; // 4mm wide
-  const holeHeight = 12; // 12mm tall
-  const holeSpacing = 15; // 15mm between hole centers
   const marginFromEdge = 10; // 10mm from edges
-  
-  // Calculate 45-degree tilt offset (tan(45°) = 1, so offset = holeHeight)
-  const tiltOffset = holeHeight; // This creates a true 45-degree angle
+  const minHoleWidth = 3; // Minimum hole width
+  const maxHoleWidth = 6; // Maximum hole width
+  const minHoleHeight = 8; // Minimum hole height
+  const maxHoleHeight = 16; // Maximum hole height
+  const minSpacing = 8; // Minimum spacing between holes
+  const maxSpacing = 20; // Maximum spacing between holes
   
   // Calculate available space for holes on each side
   const availableWidth = width - 2 * marginFromEdge;
   const availableDepth = depth - 2 * marginFromEdge;
   const availableHeight = height - bottom - 2 * marginFromEdge;
   
+  // Calculate optimal hole size and spacing based on available space
+  const calculateOptimalSize = (availableSpace: number, minHoles: number = 1) => {
+    const maxHoles = Math.max(minHoles, Math.floor(availableSpace / minSpacing));
+    const optimalSpacing = Math.min(maxSpacing, Math.max(minSpacing, availableSpace / maxHoles));
+    const optimalHoleSize = Math.min(maxHoleWidth, Math.max(minHoleWidth, optimalSpacing * 0.3));
+    const actualHoles = Math.max(minHoles, Math.floor(availableSpace / optimalSpacing));
+    return { holeSize: optimalHoleSize, spacing: optimalSpacing, holes: actualHoles };
+  };
+  
+  // Calculate optimal parameters for each side
+  const frontParams = calculateOptimalSize(availableWidth, 2);
+  const sideParams = calculateOptimalSize(availableDepth, 2);
+  const heightParams = calculateOptimalSize(availableHeight, 2);
+  
+  // Use the smaller of front/side hole sizes for consistency
+  const holeWidth = Math.min(frontParams.holeSize, sideParams.holeSize);
+  const holeHeight = heightParams.holeSize * 2; // Make height 2x the width for good proportions
+  const holeSpacing = Math.min(frontParams.spacing, sideParams.spacing, heightParams.spacing);
+  
+  // Calculate 45-degree tilt offset (tan(45°) = 1, so offset = holeHeight)
+  const tiltOffset = holeHeight; // This creates a true 45-degree angle
+  
   // Calculate number of holes that fit in each direction
-  const holesPerWidth = Math.max(1, Math.floor(availableWidth / holeSpacing));
-  const holesPerDepth = Math.max(1, Math.floor(availableDepth / holeSpacing));
-  const holesPerHeight = Math.max(1, Math.floor(availableHeight / holeSpacing));
+  const holesPerWidth = frontParams.holes;
+  const holesPerDepth = sideParams.holes;
+  const holesPerHeight = heightParams.holes;
   
   // Create holes on left side (depth x height grid)
   for (let i = 0; i < holesPerDepth; i++) {
@@ -206,7 +228,7 @@ async function createVentHoles(
   
   // NO BACK SIDE HOLES - back side has connectors and should remain untouched
   
-  console.log(`Created ${ventHoles.length} dynamic 45-degree slash-shaped vent holes (${holesPerWidth}x${holesPerHeight} on front, ${holesPerDepth}x${holesPerHeight} on sides)`);
+  console.log(`Created ${ventHoles.length} dynamic 45-degree slash-shaped vent holes (${holesPerWidth}x${holesPerHeight} on front, ${holesPerDepth}x${holesPerHeight} on sides) - Hole size: ${holeWidth.toFixed(1)}x${holeHeight.toFixed(1)}mm, Spacing: ${holeSpacing.toFixed(1)}mm`);
   
   return ventHoles;
 }
