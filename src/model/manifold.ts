@@ -125,40 +125,39 @@ async function createVentHoles(
   
   const ventHoles: Manifold[] = [];
   
-  // Create one simple square hole on each side (wider to compensate for rotation)
-  const holeHeight = 10; // 10mm height
-  const holeWidth = 15; // 15mm width to compensate for vertical stretching
+    // Create proper square holes on each side
+  const holeSize = 8; // 8mm square holes
   
-  // Left side - one simple square hole
+  // Left side - square hole facing left
   const leftHole = new manifold.CrossSection([
-    [-holeWidth/2, -holeHeight/2],
-    [holeWidth/2, -holeHeight/2],
-    [holeWidth/2, holeHeight/2],
-    [-holeWidth/2, holeHeight/2]
+    [-holeSize/2, -holeSize/2],
+    [holeSize/2, -holeSize/2],
+    [holeSize/2, holeSize/2],
+    [-holeSize/2, holeSize/2]
   ]).extrude(wall + 2)
-    .rotate(90, 0, 0) // Rotate to face the left side
+    .rotate(0, 90, 0) // Rotate around Y-axis to face left
     .translate(-width / 2 - 1, 0, height / 2);
   ventHoles.push(leftHole);
   
-  // Right side - one simple square hole
+  // Right side - square hole facing right
   const rightHole = new manifold.CrossSection([
-    [-holeWidth/2, -holeHeight/2],
-    [holeWidth/2, -holeHeight/2],
-    [holeWidth/2, holeHeight/2],
-    [-holeWidth/2, holeHeight/2]
+    [-holeSize/2, -holeSize/2],
+    [holeSize/2, -holeSize/2],
+    [holeSize/2, holeSize/2],
+    [-holeSize/2, holeSize/2]
   ]).extrude(wall + 2)
-    .rotate(90, 0, 0) // Rotate to face the right side
+    .rotate(0, -90, 0) // Rotate around Y-axis to face right
     .translate(width / 2 + 1, 0, height / 2);
   ventHoles.push(rightHole);
   
-  // Front side - one simple square hole
+  // Front side - square hole facing front
   const frontHole = new manifold.CrossSection([
-    [-holeWidth/2, -holeHeight/2],
-    [holeWidth/2, -holeHeight/2],
-    [holeWidth/2, holeHeight/2],
-    [-holeWidth/2, holeHeight/2]
+    [-holeSize/2, -holeSize/2],
+    [holeSize/2, -holeSize/2],
+    [holeSize/2, holeSize/2],
+    [-holeSize/2, holeSize/2]
   ]).extrude(wall + 2)
-    .rotate(0, 90, 0) // Rotate around Y-axis for front side
+    .rotate(90, 0, 0) // Rotate around X-axis to face front
     .translate(0, depth / 2 + 1, height / 2);
   ventHoles.push(frontHole);
   
