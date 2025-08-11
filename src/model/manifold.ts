@@ -113,7 +113,7 @@ export async function clips(
   return [clipR.trimByPlane(n, 0), clipL.trimByPlane(n, 0)];
 }
 
-// Create proper 45-degree angled vent slots that are 3D printing friendly
+// Create slash-shaped vent holes (like / slashes) that are 3D printing friendly
 async function createVentHoles(
   height: number,
   width: number,
@@ -125,41 +125,63 @@ async function createVentHoles(
   
   const ventHoles: Manifold[] = [];
   
-  // Create proper 45-degree angled slots that print without overhangs
-  const slotWidth = 5; // 5mm wide slots
-  const slotLength = 12; // 12mm long slots
+  // Create slash-shaped holes that look like "/" - diagonal cuts through the wall
+  const slashWidth = 2; // 2mm wide slashes
+  const slashHeight = 8; // 8mm tall slashes
+  const slashSpacing = 8; // 8mm between slashes
+  const marginFromEdge = 8; // 8mm from edges
   
-  // Create a proper 45-degree angled slot using a trapezoid shape
-  // This creates a slot that angles upward at 45 degrees (3D printing friendly)
-  const slotCrossSection = new manifold.CrossSection([
-    [-slotWidth/2, 0],                    // Bottom left
-    [slotWidth/2, 0],                     // Bottom right  
-    [slotWidth/2 + slotLength/2, slotLength], // Top right (angled at 45 degrees)
-    [-slotWidth/2 + slotLength/2, slotLength] // Top left (angled at 45 degrees)
-  ]);
+  // Calculate how many slashes we can fit
+  const availableHeight = Math.max(0, height - bottom - 2 * marginFromEdge);
+  const availableWidth = Math.max(0, width - 2 * marginFromEdge);
+  const availableDepth = Math.max(0, depth - 2 * marginFromEdge);
   
-  // Left side - 45-degree angled slot pointing up and out
-  const leftSlot = slotCrossSection.extrude(wall + 2)
-    .rotate(90, 0, 0) // Rotate to face left side
-    .translate(-width / 2 - 1, 0, height / 2);
-  ventHoles.push(leftSlot);
+  const slashesPerHeight = Math.max(0, Math.floor(availableHeight / slashSpacing));
+  const slashesPerWidth = Math.max(0, Math.floor(availableWidth / slashSpacing));
+  const slashesPerDepth = Math.max(0, Math.floor(availableDepth / slashSpacing));
   
-  // Right side - 45-degree angled slot pointing up and out  
-  const rightSlot = slotCrossSection.extrude(wall + 2)
-    .rotate(90, 0, 0) // Rotate to face right side
-    .mirror([1, 0, 0]) // Mirror to face outward
-    .translate(width / 2 + 1, 0, height / 2);
-  ventHoles.push(rightSlot);
+  // Only create slashes if we have space
+  if (slashesPerHeight <= 0 || slashesPerWidth <= 0 || slashesPerDepth <= 0) {
+    return ventHoles;
+  }
   
-  // Front side - 45-degree angled slot pointing up and out
-  const frontSlot = slotCrossSection.extrude(wall + 2)
-    .rotate(0, 90, 0) // Rotate to face front side
-    .translate(0, -depth / 2 - 1, height / 2);
-  ventHoles.push(frontSlot);
+  // Create slash-shaped holes on the left and right sides (X faces)
+  for (let h = 0; h < slashesPerHeight; h++) {
+    for (let d = 0; d < slashesPerDepth; d++) {
+      const y = -depth / 2 + marginFromEdge + d * slashSpacing;
+      const z = bottom + marginFromEdge + h * slashSpacing;
+      
+      // Left side slash - diagonal cut pointing up and right (/)
+      const leftSlash = manifold.cube([wall + 2, slashWidth, slashHeight])
+        .rotate(0, 0, 45) // 45 degree rotation to create diagonal slash
+        .translate(-width / 2 - 1, y, z);
+      ventHoles.push(leftSlash);
+      
+      // Right side slash - diagonal cut pointing up and left (\)
+      const rightSlash = manifold.cube([wall + 2, slashWidth, slashHeight])
+        .rotate(0, 0, -45) // -45 degree rotation to create diagonal slash
+        .translate(width / 2 + 1, y, z);
+      ventHoles.push(rightSlash);
+    }
+  }
+  
+  // Create slash-shaped holes on the front side only (Y face) - NO BACK SIDE
+  for (let h = 0; h < slashesPerHeight; h++) {
+    for (let w = 0; w < slashesPerWidth; w++) {
+      const x = -width / 2 + marginFromEdge + w * slashSpacing;
+      const z = bottom + marginFromEdge + h * slashSpacing;
+      
+      // Front side slash - diagonal cut pointing up and right (/)
+      const frontSlash = manifold.cube([slashWidth, wall + 2, slashHeight])
+        .rotate(45, 0, 0) // 45 degree rotation to create diagonal slash
+        .translate(x, -depth / 2 - 1, z); // Front side (negative Y)
+      ventHoles.push(frontSlash);
+    }
+  }
   
   // NO BACK SIDE HOLES - back side has connectors and should remain untouched
   
-  console.log("Created 45-degree vent slots on left, right, and front sides only:", ventHoles.length);
+  console.log("Created slash-shaped vent holes on left, right, and front sides only:", ventHoles.length);
   
   return ventHoles;
 }
