@@ -113,7 +113,7 @@ export async function clips(
   return [clipR.trimByPlane(n, 0), clipL.trimByPlane(n, 0)];
 }
 
-// Create slash-shaped vent holes (like / slashes) that are 3D printing friendly
+// Create 45-degree angled vent slots (like USB-C slots rotated 45 degrees)
 async function createVentHoles(
   height: number,
   width: number,
@@ -125,39 +125,78 @@ async function createVentHoles(
   
   const ventHoles: Manifold[] = [];
   
-  // Create one large test slash on each side to make sure it's visible
-  const slashWidth = 4; // 4mm wide slashes
-  const slashHeight = 15; // 15mm tall slashes
+  // Create USB-C style slots rotated 45 degrees
+  const slotWidth = 3; // 3mm wide slots
+  const slotHeight = 8; // 8mm tall slots
+  const slotSpacing = 12; // 12mm between slots
+  const marginFromEdge = 10; // 10mm from edges
   
-  // Create a rectangular cross-section for the slash
-  const slashCrossSection = new manifold.CrossSection([
-    [-slashWidth/2, -slashHeight/2],
-    [slashWidth/2, -slashHeight/2],
-    [slashWidth/2, slashHeight/2],
-    [-slashWidth/2, slashHeight/2]
-  ]);
+  // Calculate how many slots we can fit
+  const availableHeight = Math.max(0, height - bottom - 2 * marginFromEdge);
+  const availableWidth = Math.max(0, width - 2 * marginFromEdge);
+  const availableDepth = Math.max(0, depth - 2 * marginFromEdge);
   
-  // Left side - one large test slash (/)
-  const leftSlash = slashCrossSection.extrude(wall + 2)
-    .rotate(0, 0, 45) // 45 degree rotation to create diagonal slash
-    .translate(-width / 2 - 1, 0, height / 2);
-  ventHoles.push(leftSlash);
+  const slotsPerHeight = Math.max(0, Math.floor(availableHeight / slotSpacing));
+  const slotsPerWidth = Math.max(0, Math.floor(availableWidth / slotSpacing));
+  const slotsPerDepth = Math.max(0, Math.floor(availableDepth / slotSpacing));
   
-  // Right side - one large test slash (\)
-  const rightSlash = slashCrossSection.extrude(wall + 2)
-    .rotate(0, 0, -45) // -45 degree rotation to create diagonal slash
-    .translate(width / 2 + 1, 0, height / 2);
-  ventHoles.push(rightSlash);
+  // Only create slots if we have space
+  if (slotsPerHeight <= 0 || slotsPerWidth <= 0 || slotsPerDepth <= 0) {
+    return ventHoles;
+  }
   
-  // Front side - one large test slash (/)
-  const frontSlash = slashCrossSection.extrude(wall + 2)
-    .rotate(45, 0, 0) // 45 degree rotation to create diagonal slash
-    .translate(0, -depth / 2 - 1, height / 2); // Front side (negative Y)
-  ventHoles.push(frontSlash);
+  // Create USB-C style slots on the left and right sides (X faces)
+  for (let h = 0; h < slotsPerHeight; h++) {
+    for (let d = 0; d < slotsPerDepth; d++) {
+      const y = -depth / 2 + marginFromEdge + d * slotSpacing;
+      const z = bottom + marginFromEdge + h * slotSpacing;
+      
+      // Left side - USB-C slot rotated 45 degrees
+      const leftSlot = new manifold.CrossSection([
+        [-slotWidth/2, -slotHeight/2],
+        [slotWidth/2, -slotHeight/2],
+        [slotWidth/2, slotHeight/2],
+        [-slotWidth/2, slotHeight/2]
+      ]).extrude(wall + 2)
+        .rotate(0, 0, 45) // 45 degree rotation
+        .translate(-width / 2 - 1, y, z);
+      ventHoles.push(leftSlot);
+      
+      // Right side - USB-C slot rotated -45 degrees
+      const rightSlot = new manifold.CrossSection([
+        [-slotWidth/2, -slotHeight/2],
+        [slotWidth/2, -slotHeight/2],
+        [slotWidth/2, slotHeight/2],
+        [-slotWidth/2, slotHeight/2]
+      ]).extrude(wall + 2)
+        .rotate(0, 0, -45) // -45 degree rotation
+        .translate(width / 2 + 1, y, z);
+      ventHoles.push(rightSlot);
+    }
+  }
+  
+  // Create USB-C style slots on the front side only (Y face) - NO BACK SIDE
+  for (let h = 0; h < slotsPerHeight; h++) {
+    for (let w = 0; w < slotsPerWidth; w++) {
+      const x = -width / 2 + marginFromEdge + w * slotSpacing;
+      const z = bottom + marginFromEdge + h * slotSpacing;
+      
+      // Front side - USB-C slot rotated 45 degrees
+      const frontSlot = new manifold.CrossSection([
+        [-slotWidth/2, -slotHeight/2],
+        [slotWidth/2, -slotHeight/2],
+        [slotWidth/2, slotHeight/2],
+        [-slotWidth/2, slotHeight/2]
+      ]).extrude(wall + 2)
+        .rotate(45, 0, 0) // 45 degree rotation
+        .translate(x, -depth / 2 - 1, z); // Front side (negative Y) - NO BACK SIDE
+      ventHoles.push(frontSlot);
+    }
+  }
   
   // NO BACK SIDE HOLES - back side has connectors and should remain untouched
   
-  console.log("Created test slash-shaped vent holes:", ventHoles.length);
+  console.log("Created 45-degree USB-C style vent slots:", ventHoles.length);
   
   return ventHoles;
 }
