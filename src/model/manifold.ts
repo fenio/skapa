@@ -113,7 +113,7 @@ export async function clips(
   return [clipR.trimByPlane(n, 0), clipL.trimByPlane(n, 0)];
 }
 
-// Create 45-degree angled vent slots on the sides of the box
+// Create proper 45-degree angled vent slots that are 3D printing friendly
 async function createVentHoles(
   height: number,
   width: number,
@@ -125,37 +125,40 @@ async function createVentHoles(
   
   const ventHoles: Manifold[] = [];
   
-  // Create simple rectangular slots using CrossSection (like the existing code does)
-  const slotWidth = 6; // 6mm wide slots
-  const slotLength = 20; // 20mm long slots
+  // Create proper 45-degree angled slots that print without overhangs
+  const slotWidth = 4; // 4mm wide slots
+  const slotHeight = 8; // 8mm tall slots
+  const slotDepth = 6; // 6mm deep slots
   
-  // Create a simple rectangle cross-section for the slot
+  // Create a parallelogram cross-section that will create a 45-degree angle when extruded
+  // This creates a slot that angles upward at 45 degrees (3D printing friendly)
   const slotCrossSection = new manifold.CrossSection([
-    [-slotWidth/2, -slotLength/2],
-    [slotWidth/2, -slotLength/2],
-    [slotWidth/2, slotLength/2],
-    [-slotWidth/2, slotLength/2]
+    [-slotWidth/2, 0],           // Bottom left
+    [slotWidth/2, 0],            // Bottom right  
+    [slotWidth/2 + slotHeight, slotHeight], // Top right (angled)
+    [-slotWidth/2 + slotHeight, slotHeight] // Top left (angled)
   ]);
   
-  // Left side - one large test slot
-  const leftSlot = slotCrossSection.extrude(wall + 2)
-    .rotate(0, 0, 45) // 45 degree rotation around Z axis
-    .translate(-width / 2 - 1, 0, height / 2);
+  // Left side - 45-degree angled slot pointing up and out
+  const leftSlot = slotCrossSection.extrude(slotDepth)
+    .rotate(90, 0, 0) // Rotate to face left side
+    .translate(-width / 2 - slotDepth/2, 0, height / 2);
   ventHoles.push(leftSlot);
   
-  // Right side - one large test slot
-  const rightSlot = slotCrossSection.extrude(wall + 2)
-    .rotate(0, 0, -45) // -45 degree rotation around Z axis
-    .translate(width / 2 + 1, 0, height / 2);
+  // Right side - 45-degree angled slot pointing up and out
+  const rightSlot = slotCrossSection.extrude(slotDepth)
+    .rotate(90, 0, 0) // Rotate to face right side
+    .mirror([1, 0, 0]) // Mirror to face outward
+    .translate(width / 2 + slotDepth/2, 0, height / 2);
   ventHoles.push(rightSlot);
   
-  // Front side - one large test slot
-  const frontSlot = slotCrossSection.extrude(wall + 2)
-    .rotate(45, 0, 0) // 45 degree rotation around X axis
-    .translate(0, -depth / 2 - 1, height / 2);
+  // Front side - 45-degree angled slot pointing up and out
+  const frontSlot = slotCrossSection.extrude(slotDepth)
+    .rotate(0, 90, 0) // Rotate to face front side
+    .translate(0, -depth / 2 - slotDepth/2, height / 2);
   ventHoles.push(frontSlot);
   
-  console.log("Created vent holes:", ventHoles.length);
+  console.log("Created 45-degree vent slots:", ventHoles.length);
   
   return ventHoles;
 }
