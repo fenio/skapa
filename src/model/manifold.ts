@@ -151,23 +151,23 @@ async function createVentHoles(
       const y = -depth / 2 + marginFromEdge + d * slotSpacing;
       const z = bottom + marginFromEdge + h * slotSpacing;
       
-      // Left side - USB-C slot rotated 45 degrees
+      // Left side - USB-C style slot (rounded rectangle) rotated 45 degrees
       const leftSlot = new manifold.CrossSection([
-        [-slotWidth/2, -slotHeight/2],
-        [slotWidth/2, -slotHeight/2],
-        [slotWidth/2, slotHeight/2],
-        [-slotWidth/2, slotHeight/2]
+        [-slotWidth/2, -slotHeight/2 + 1], // Bottom left with rounded corner
+        [slotWidth/2 - 1, -slotHeight/2 + 1], // Bottom right with rounded corner
+        [slotWidth/2 - 1, slotHeight/2 - 1], // Top right with rounded corner
+        [-slotWidth/2, slotHeight/2 - 1] // Top left with rounded corner
       ]).extrude(wall + 2)
         .rotate(0, 0, 45) // 45 degree rotation
         .translate(-width / 2 - 1, y, z);
       ventHoles.push(leftSlot);
       
-      // Right side - USB-C slot rotated -45 degrees
+      // Right side - USB-C style slot (rounded rectangle) rotated -45 degrees
       const rightSlot = new manifold.CrossSection([
-        [-slotWidth/2, -slotHeight/2],
-        [slotWidth/2, -slotHeight/2],
-        [slotWidth/2, slotHeight/2],
-        [-slotWidth/2, slotHeight/2]
+        [-slotWidth/2, -slotHeight/2 + 1], // Bottom left with rounded corner
+        [slotWidth/2 - 1, -slotHeight/2 + 1], // Bottom right with rounded corner
+        [slotWidth/2 - 1, slotHeight/2 - 1], // Top right with rounded corner
+        [-slotWidth/2, slotHeight/2 - 1] // Top left with rounded corner
       ]).extrude(wall + 2)
         .rotate(0, 0, -45) // -45 degree rotation
         .translate(width / 2 + 1, y, z);
@@ -181,15 +181,16 @@ async function createVentHoles(
       const x = -width / 2 + marginFromEdge + w * slotSpacing;
       const z = bottom + marginFromEdge + h * slotSpacing;
       
-      // Front side - USB-C slot rotated 45 degrees
+      // Front side - USB-C style slot (rounded rectangle) rotated 45 degrees
+      // Back side is at -depth/2 (where clips are), so front side is at +depth/2
       const frontSlot = new manifold.CrossSection([
-        [-slotWidth/2, -slotHeight/2],
-        [slotWidth/2, -slotHeight/2],
-        [slotWidth/2, slotHeight/2],
-        [-slotWidth/2, slotHeight/2]
+        [-slotWidth/2, -slotHeight/2 + 1], // Bottom left with rounded corner
+        [slotWidth/2 - 1, -slotHeight/2 + 1], // Bottom right with rounded corner
+        [slotWidth/2 - 1, slotHeight/2 - 1], // Top right with rounded corner
+        [-slotWidth/2, slotHeight/2 - 1] // Top left with rounded corner
       ]).extrude(wall + 2)
         .rotate(45, 0, 0) // 45 degree rotation
-        .translate(x, -depth / 2 - 1, z); // Front side (negative Y) - NO BACK SIDE
+        .translate(x, depth / 2 + 1, z); // Front side (positive Y) - NOT back side
       ventHoles.push(frontSlot);
     }
   }
