@@ -138,14 +138,14 @@ async function createVentHoles(
       const y = -depth / 2 + marginFromEdge + i * holeSpacing;
       const z = bottom + marginFromEdge + j * holeSpacing;
       
+      // Create a tilted rectangle cross-section for left side
       const leftHole = new manifold.CrossSection([
-        [-holeWidth/2, -holeHeight/2],
-        [holeWidth/2, -holeHeight/2],
-        [holeWidth/2, holeHeight/2],
-        [-holeWidth/2, holeHeight/2]
+        [-holeWidth/2, -holeHeight/2], // Bottom left
+        [holeWidth/2, -holeHeight/2], // Bottom right
+        [holeWidth/2 + holeHeight/2, holeHeight/2], // Top right (tilted)
+        [-holeWidth/2 + holeHeight/2, holeHeight/2] // Top left (tilted)
       ]).extrude(wall + 2)
         .rotate(0, 90, 0) // Rotate around Y-axis to face left
-        .rotate(0, 0, 45) // Tilt 45 degrees
         .translate(x, y, z);
       ventHoles.push(leftHole);
     }
@@ -158,14 +158,14 @@ async function createVentHoles(
       const y = -depth / 2 + marginFromEdge + i * holeSpacing;
       const z = bottom + marginFromEdge + j * holeSpacing;
       
+      // Create a tilted rectangle cross-section for right side (opposite tilt)
       const rightHole = new manifold.CrossSection([
-        [-holeWidth/2, -holeHeight/2],
-        [holeWidth/2, -holeHeight/2],
-        [holeWidth/2, holeHeight/2],
-        [-holeWidth/2, holeHeight/2]
+        [-holeWidth/2, -holeHeight/2], // Bottom left
+        [holeWidth/2, -holeHeight/2], // Bottom right
+        [holeWidth/2 - holeHeight/2, holeHeight/2], // Top right (tilted opposite)
+        [-holeWidth/2 - holeHeight/2, holeHeight/2] // Top left (tilted opposite)
       ]).extrude(wall + 2)
         .rotate(0, -90, 0) // Rotate around Y-axis to face right
-        .rotate(0, 0, -45) // Tilt -45 degrees (opposite direction)
         .translate(x, y, z);
       ventHoles.push(rightHole);
     }
@@ -178,14 +178,14 @@ async function createVentHoles(
       const y = depth / 2 + 1;
       const z = bottom + marginFromEdge + j * holeSpacing;
       
+      // Create a tilted rectangle cross-section for front side
       const frontHole = new manifold.CrossSection([
-        [-holeWidth/2, -holeHeight/2],
-        [holeWidth/2, -holeHeight/2],
-        [holeWidth/2, holeHeight/2],
-        [-holeWidth/2, holeHeight/2]
+        [-holeWidth/2, -holeHeight/2], // Bottom left
+        [holeWidth/2, -holeHeight/2], // Bottom right
+        [holeWidth/2 + holeHeight/2, holeHeight/2], // Top right (tilted)
+        [-holeWidth/2 + holeHeight/2, holeHeight/2] // Top left (tilted)
       ]).extrude(wall + 2)
         .rotate(90, 0, 0) // Rotate around X-axis to face front
-        .rotate(0, 0, 45) // Tilt 45 degrees
         .translate(x, y, z);
       ventHoles.push(frontHole);
     }
