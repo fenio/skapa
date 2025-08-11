@@ -125,41 +125,67 @@ async function createVentHoles(
   
   const ventHoles: Manifold[] = [];
   
-    // Create proper square holes on each side
-  const holeSize = 8; // 8mm square holes
+    // Create 4 square holes on each side
+  const holeSize = 6; // 6mm square holes (smaller to fit 4)
+  const holeSpacing = 15; // 15mm between hole centers
+  const marginFromEdge = 10; // 10mm from edges
   
-  // Left side - square hole facing left
-  const leftHole = new manifold.CrossSection([
-    [-holeSize/2, -holeSize/2],
-    [holeSize/2, -holeSize/2],
-    [holeSize/2, holeSize/2],
-    [-holeSize/2, holeSize/2]
-  ]).extrude(wall + 2)
-    .rotate(0, 90, 0) // Rotate around Y-axis to face left
-    .translate(-width / 2 - 1, 0, height / 2);
-  ventHoles.push(leftHole);
+  // Create 4 holes on left side
+  for (let i = 0; i < 2; i++) {
+    for (let j = 0; j < 2; j++) {
+      const x = -width / 2 - 1;
+      const y = -depth / 2 + marginFromEdge + i * holeSpacing;
+      const z = bottom + marginFromEdge + j * holeSpacing;
+      
+      const leftHole = new manifold.CrossSection([
+        [-holeSize/2, -holeSize/2],
+        [holeSize/2, -holeSize/2],
+        [holeSize/2, holeSize/2],
+        [-holeSize/2, holeSize/2]
+      ]).extrude(wall + 2)
+        .rotate(0, 90, 0) // Rotate around Y-axis to face left
+        .translate(x, y, z);
+      ventHoles.push(leftHole);
+    }
+  }
   
-  // Right side - square hole facing right
-  const rightHole = new manifold.CrossSection([
-    [-holeSize/2, -holeSize/2],
-    [holeSize/2, -holeSize/2],
-    [holeSize/2, holeSize/2],
-    [-holeSize/2, holeSize/2]
-  ]).extrude(wall + 2)
-    .rotate(0, -90, 0) // Rotate around Y-axis to face right
-    .translate(width / 2 + 1, 0, height / 2);
-  ventHoles.push(rightHole);
+  // Create 4 holes on right side
+  for (let i = 0; i < 2; i++) {
+    for (let j = 0; j < 2; j++) {
+      const x = width / 2 + 1;
+      const y = -depth / 2 + marginFromEdge + i * holeSpacing;
+      const z = bottom + marginFromEdge + j * holeSpacing;
+      
+      const rightHole = new manifold.CrossSection([
+        [-holeSize/2, -holeSize/2],
+        [holeSize/2, -holeSize/2],
+        [holeSize/2, holeSize/2],
+        [-holeSize/2, holeSize/2]
+      ]).extrude(wall + 2)
+        .rotate(0, -90, 0) // Rotate around Y-axis to face right
+        .translate(x, y, z);
+      ventHoles.push(rightHole);
+    }
+  }
   
-  // Front side - square hole facing front
-  const frontHole = new manifold.CrossSection([
-    [-holeSize/2, -holeSize/2],
-    [holeSize/2, -holeSize/2],
-    [holeSize/2, holeSize/2],
-    [-holeSize/2, holeSize/2]
-  ]).extrude(wall + 2)
-    .rotate(90, 0, 0) // Rotate around X-axis to face front
-    .translate(0, depth / 2 + 1, height / 2);
-  ventHoles.push(frontHole);
+  // Create 4 holes on front side
+  for (let i = 0; i < 2; i++) {
+    for (let j = 0; j < 2; j++) {
+      const x = -width / 2 + marginFromEdge + i * holeSpacing;
+      const y = depth / 2 + 1;
+      const z = bottom + marginFromEdge + j * holeSpacing;
+      
+      const frontHole = new manifold.CrossSection([
+        [-holeSize/2, -holeSize/2],
+        [holeSize/2, -holeSize/2],
+        [holeSize/2, holeSize/2],
+        [-holeSize/2, holeSize/2]
+      ]).extrude(wall + 2)
+        .rotate(90, 0, 0) // Rotate around X-axis to face front
+        .translate(x, y, z);
+      ventHoles.push(frontHole);
+    }
+  }
   
   // NO BACK SIDE HOLES - back side has connectors and should remain untouched
   
