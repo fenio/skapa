@@ -126,7 +126,7 @@ async function createVentHoles(
   const ventHoles: Manifold[] = [];
   
     // Create dynamic vent holes based on box size
-  const marginFromEdge = 10; // 10mm from edges
+  const marginFromEdge = 5; // 5mm from edges
   const minHoleWidth = 3; // Minimum hole width
   const maxHoleWidth = 6; // Maximum hole width
   const minHoleHeight = 8; // Minimum hole height
