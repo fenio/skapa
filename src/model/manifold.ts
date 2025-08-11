@@ -129,20 +129,28 @@ async function createVentHoles(
   const slashWidth = 4; // 4mm wide slashes
   const slashHeight = 15; // 15mm tall slashes
   
+  // Create a rectangular cross-section for the slash
+  const slashCrossSection = new manifold.CrossSection([
+    [-slashWidth/2, -slashHeight/2],
+    [slashWidth/2, -slashHeight/2],
+    [slashWidth/2, slashHeight/2],
+    [-slashWidth/2, slashHeight/2]
+  ]);
+  
   // Left side - one large test slash (/)
-  const leftSlash = manifold.cube([wall + 2, slashWidth, slashHeight])
+  const leftSlash = slashCrossSection.extrude(wall + 2)
     .rotate(0, 0, 45) // 45 degree rotation to create diagonal slash
     .translate(-width / 2 - 1, 0, height / 2);
   ventHoles.push(leftSlash);
   
   // Right side - one large test slash (\)
-  const rightSlash = manifold.cube([wall + 2, slashWidth, slashHeight])
+  const rightSlash = slashCrossSection.extrude(wall + 2)
     .rotate(0, 0, -45) // -45 degree rotation to create diagonal slash
     .translate(width / 2 + 1, 0, height / 2);
   ventHoles.push(rightSlash);
   
   // Front side - one large test slash (/)
-  const frontSlash = manifold.cube([slashWidth, wall + 2, slashHeight])
+  const frontSlash = slashCrossSection.extrude(wall + 2)
     .rotate(45, 0, 0) // 45 degree rotation to create diagonal slash
     .translate(0, -depth / 2 - 1, height / 2); // Front side (negative Y)
   ventHoles.push(frontSlash);
