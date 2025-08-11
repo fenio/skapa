@@ -32,21 +32,16 @@ const START_WALL = 2;
 const START_BOTTOM = 3;
 
 const START_HEIGHT = 52; /* starting height in mm */
-const MIN_HEIGHT = 12; /* minimum height (1 level) */
-const MAX_HEIGHT = 172; /* maximum height (5 levels) */
-
-// Calculate levels from height using the reverse formula
-// Original: height = levels * CLIP_HEIGHT + (levels - 1) * (40 - CLIP_HEIGHT)
-// Reverse: levels = (height + 40 - CLIP_HEIGHT) / (CLIP_HEIGHT + 40 - CLIP_HEIGHT)
-function calculateLevelsFromHeight(height: number): number {
-  return Math.round((height + 40 - CLIP_HEIGHT) / (CLIP_HEIGHT + 40 - CLIP_HEIGHT));
-}
+const MIN_HEIGHT = 20; /* minimum height */
+const MAX_HEIGHT = 256; /* maximum height */
 
 const START_WIDTH = 80;
-const MIN_WIDTH = 10 + 2 * START_RADIUS;
+const MIN_WIDTH = 20;
+const MAX_WIDTH = 256;
 
 const START_DEPTH = 60;
 const MIN_DEPTH = 20;
+const MAX_DEPTH = 256;
 
 /// STATE
 
@@ -213,7 +208,7 @@ const link = document.querySelector("a")!;
 const inputs = {
   height: document.querySelector("#height")! as HTMLInputElement,
   heightRange: document.querySelector("#height-range")! as HTMLInputElement,
-  levelsDisplay: document.querySelector("#levels-display")! as HTMLSpanElement,
+
   width: document.querySelector("#width")! as HTMLInputElement,
   widthRange: document.querySelector("#width-range")! as HTMLInputElement,
   depth: document.querySelector("#depth")! as HTMLInputElement,
@@ -241,11 +236,7 @@ const inputs = {
   });
 });
 
-// Update levels display when height changes
-modelDimensions.height.addListener((height) => {
-  const levels = calculateLevelsFromHeight(height);
-  inputs.levelsDisplay.textContent = `${levels}`;
-});
+
 
 // width
 (
@@ -260,7 +251,7 @@ modelDimensions.height.addListener((height) => {
   input.addEventListener(evnt, () => {
     const outer = parseInt(input.value) + 2 * modelDimensions.wall.latest;
     if (!Number.isNaN(outer))
-      modelDimensions.width.send(Math.max(outer, MIN_WIDTH));
+      modelDimensions.width.send(Math.max(MIN_WIDTH, Math.min(outer, MAX_WIDTH)));
   });
 });
 
@@ -277,7 +268,7 @@ modelDimensions.height.addListener((height) => {
   input.addEventListener(evnt, () => {
     const outer = parseInt(input.value) + 2 * modelDimensions.wall.latest;
     if (!Number.isNaN(outer))
-      modelDimensions.depth.send(Math.max(outer, MIN_DEPTH));
+      modelDimensions.depth.send(Math.max(MIN_DEPTH, Math.min(outer, MAX_DEPTH)));
   });
 });
 
