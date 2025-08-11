@@ -214,7 +214,7 @@ async function createVentHoles(
     for (let j = 0; j < holesPerHeight; j++) {
       const x = -width / 2 + marginFromEdge + i * holeSpacing;
       const y = depth / 2 + 1;
-      const z = baseHeight + j * holeSpacing;
+      const z = baseHeight + j * holeSpacing - holeHeight/2; // Adjust for rotation offset
       
       // Create a 45-degree tilted rectangle cross-section for front side
       const frontHole = new manifold.CrossSection([
