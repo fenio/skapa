@@ -125,15 +125,16 @@ async function createVentHoles(
   
   const ventHoles: Manifold[] = [];
   
-  // Create one simple square hole on each side
-  const holeSize = 10; // 10mm square holes
+  // Create one simple square hole on each side (wider to compensate for rotation)
+  const holeHeight = 10; // 10mm height
+  const holeWidth = 15; // 15mm width to compensate for vertical stretching
   
   // Left side - one simple square hole
   const leftHole = new manifold.CrossSection([
-    [-holeSize/2, -holeSize/2],
-    [holeSize/2, -holeSize/2],
-    [holeSize/2, holeSize/2],
-    [-holeSize/2, holeSize/2]
+    [-holeWidth/2, -holeHeight/2],
+    [holeWidth/2, -holeHeight/2],
+    [holeWidth/2, holeHeight/2],
+    [-holeWidth/2, holeHeight/2]
   ]).extrude(wall + 2)
     .rotate(90, 0, 0) // Rotate to face the left side
     .translate(-width / 2 - 1, 0, height / 2);
@@ -141,10 +142,10 @@ async function createVentHoles(
   
   // Right side - one simple square hole
   const rightHole = new manifold.CrossSection([
-    [-holeSize/2, -holeSize/2],
-    [holeSize/2, -holeSize/2],
-    [holeSize/2, holeSize/2],
-    [-holeSize/2, holeSize/2]
+    [-holeWidth/2, -holeHeight/2],
+    [holeWidth/2, -holeHeight/2],
+    [holeWidth/2, holeHeight/2],
+    [-holeWidth/2, holeHeight/2]
   ]).extrude(wall + 2)
     .rotate(90, 0, 0) // Rotate to face the right side
     .translate(width / 2 + 1, 0, height / 2);
@@ -152,10 +153,10 @@ async function createVentHoles(
   
   // Front side - one simple square hole
   const frontHole = new manifold.CrossSection([
-    [-holeSize/2, -holeSize/2],
-    [holeSize/2, -holeSize/2],
-    [holeSize/2, holeSize/2],
-    [-holeSize/2, holeSize/2]
+    [-holeWidth/2, -holeHeight/2],
+    [holeWidth/2, -holeHeight/2],
+    [holeWidth/2, holeHeight/2],
+    [-holeWidth/2, holeHeight/2]
   ]).extrude(wall + 2)
     .rotate(0, 90, 0) // Rotate around Y-axis for front side
     .translate(0, depth / 2 + 1, height / 2);
