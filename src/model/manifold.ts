@@ -167,7 +167,7 @@ async function createVentHoles(
   const holesPerHeight = heightParams.holes;
   
   // Calculate consistent base height for all sides
-  const baseHeight = bottom + marginFromEdge + 15; // Start holes lower
+  const baseHeight = bottom + marginFromEdge + 2; // Start holes lower
   
   // Create holes on left side (depth x height grid)
   for (let i = 0; i < holesPerDepth; i++) {
