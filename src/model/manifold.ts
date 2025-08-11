@@ -121,21 +121,26 @@ async function createVentHoles(
   wall: number,
   bottom: number,
 ): Promise<Manifold[]> {
-  const { Manifold } = await ManifoldModule.get();
+  const manifold = await ManifoldModule.get();
   
   const ventHoles: Manifold[] = [];
-  const holeRadius = 2; // 4mm diameter holes
+  const holeRadius = 1.5; // 3mm diameter holes
   const holeSpacing = 12; // 12mm between hole centers
   const marginFromEdge = 8; // 8mm from edges
   
   // Calculate how many holes we can fit on each side
-  const availableHeight = height - bottom - 2 * marginFromEdge;
-  const availableWidth = width - 2 * marginFromEdge;
-  const availableDepth = depth - 2 * marginFromEdge;
+  const availableHeight = Math.max(0, height - bottom - 2 * marginFromEdge);
+  const availableWidth = Math.max(0, width - 2 * marginFromEdge);
+  const availableDepth = Math.max(0, depth - 2 * marginFromEdge);
   
-  const holesPerHeight = Math.floor(availableHeight / holeSpacing);
-  const holesPerWidth = Math.floor(availableWidth / holeSpacing);
-  const holesPerDepth = Math.floor(availableDepth / holeSpacing);
+  const holesPerHeight = Math.max(0, Math.floor(availableHeight / holeSpacing));
+  const holesPerWidth = Math.max(0, Math.floor(availableWidth / holeSpacing));
+  const holesPerDepth = Math.max(0, Math.floor(availableDepth / holeSpacing));
+  
+  // Only create holes if we have space
+  if (holesPerHeight <= 0 || holesPerWidth <= 0 || holesPerDepth <= 0) {
+    return ventHoles;
+  }
   
   // Create holes on the left and right sides (X faces)
   for (let h = 0; h < holesPerHeight; h++) {
@@ -144,17 +149,15 @@ async function createVentHoles(
       const z = bottom + marginFromEdge + h * holeSpacing;
       
       // Left side hole
-      const leftHole = new Manifold()
-        .cylinder(holeRadius, wall + 1, 0, 0)
+      const leftHole = manifold.cylinder(holeRadius, wall + 2, 0, 0)
         .rotate(90, 0, 0)
-        .translate(-width / 2 - 0.5, y, z);
+        .translate(-width / 2 - 1, y, z);
       ventHoles.push(leftHole);
       
       // Right side hole
-      const rightHole = new Manifold()
-        .cylinder(holeRadius, wall + 1, 0, 0)
+      const rightHole = manifold.cylinder(holeRadius, wall + 2, 0, 0)
         .rotate(90, 0, 0)
-        .translate(width / 2 + 0.5, y, z);
+        .translate(width / 2 + 1, y, z);
       ventHoles.push(rightHole);
     }
   }
@@ -166,17 +169,15 @@ async function createVentHoles(
       const z = bottom + marginFromEdge + h * holeSpacing;
       
       // Front side hole
-      const frontHole = new Manifold()
-        .cylinder(holeRadius, wall + 1, 0, 0)
+      const frontHole = manifold.cylinder(holeRadius, wall + 2, 0, 0)
         .rotate(0, 90, 0)
-        .translate(x, -depth / 2 - 0.5, z);
+        .translate(x, -depth / 2 - 1, z);
       ventHoles.push(frontHole);
       
       // Back side hole
-      const backHole = new Manifold()
-        .cylinder(holeRadius, wall + 1, 0, 0)
+      const backHole = manifold.cylinder(holeRadius, wall + 2, 0, 0)
         .rotate(0, 90, 0)
-        .translate(x, depth / 2 + 0.5, z);
+        .translate(x, depth / 2 + 1, z);
       ventHoles.push(backHole);
     }
   }
@@ -203,15 +204,20 @@ export async function base(
     .extrude(height - bottom)
     .translate([0, 0, bottom]);
 
-  // Create vent holes
-  const ventHoles = await createVentHoles(height, width, depth, wall, bottom);
-  
   // Start with the basic box
   let result = outer.subtract(innerNeg);
   
-  // Subtract all vent holes
-  for (const hole of ventHoles) {
-    result = result.subtract(hole);
+  // Try to add vent holes, but don't fail if it doesn't work
+  try {
+    const ventHoles = await createVentHoles(height, width, depth, wall, bottom);
+    
+    // Subtract all vent holes
+    for (const hole of ventHoles) {
+      result = result.subtract(hole);
+    }
+  } catch (error) {
+    console.warn("Failed to create vent holes:", error);
+    // Continue without vent holes if there's an error
   }
 
   return result;
