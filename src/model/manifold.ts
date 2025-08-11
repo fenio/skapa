@@ -149,7 +149,7 @@ async function createVentHoles(
     .translate(width / 2 + 1, 0, height / 2);
   ventHoles.push(rightHole);
   
-  // Front side - one rectangular hole
+  // Front side - one rectangular hole (same as left/right)
   const frontHole = new manifold.CrossSection([
     [-holeWidth/2, -holeHeight/2],
     [holeWidth/2, -holeHeight/2],
