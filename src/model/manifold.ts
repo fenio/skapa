@@ -124,58 +124,38 @@ async function createVentHoles(
   const manifold = await ManifoldModule.get();
   
   const ventHoles: Manifold[] = [];
-  const slotWidth = 3; // 3mm wide slots
-  const slotLength = 8; // 8mm long slots
-  const slotSpacing = 15; // 15mm between slot centers
-  const marginFromEdge = 10; // 10mm from edges
   
-  // Calculate how many slots we can fit on each side
-  const availableHeight = Math.max(0, height - bottom - 2 * marginFromEdge);
-  const availableWidth = Math.max(0, width - 2 * marginFromEdge);
-  const availableDepth = Math.max(0, depth - 2 * marginFromEdge);
+  // Create simple rectangular slots using CrossSection (like the existing code does)
+  const slotWidth = 6; // 6mm wide slots
+  const slotLength = 20; // 20mm long slots
   
-  const slotsPerHeight = Math.max(0, Math.floor(availableHeight / slotSpacing));
-  const slotsPerWidth = Math.max(0, Math.floor(availableWidth / slotSpacing));
-  const slotsPerDepth = Math.max(0, Math.floor(availableDepth / slotSpacing));
+  // Create a simple rectangle cross-section for the slot
+  const slotCrossSection = new manifold.CrossSection([
+    [-slotWidth/2, -slotLength/2],
+    [slotWidth/2, -slotLength/2],
+    [slotWidth/2, slotLength/2],
+    [-slotWidth/2, slotLength/2]
+  ]);
   
-  // Only create slots if we have space
-  if (slotsPerHeight <= 0 || slotsPerWidth <= 0 || slotsPerDepth <= 0) {
-    return ventHoles;
-  }
+  // Left side - one large test slot
+  const leftSlot = slotCrossSection.extrude(wall + 2)
+    .rotate(0, 0, 45) // 45 degree rotation around Z axis
+    .translate(-width / 2 - 1, 0, height / 2);
+  ventHoles.push(leftSlot);
   
-  // Create slots on the left and right sides (X faces)
-  for (let h = 0; h < slotsPerHeight; h++) {
-    for (let d = 0; d < slotsPerDepth; d++) {
-      const y = -depth / 2 + marginFromEdge + d * slotSpacing;
-      const z = bottom + marginFromEdge + h * slotSpacing;
-      
-      // Left side slot - 45 degree angle pointing up and out
-      const leftSlot = manifold.cube([wall + 2, slotWidth, slotLength])
-        .rotate(0, 0, 45) // 45 degree rotation around Z axis
-        .translate(-width / 2 - 1, y, z);
-      ventHoles.push(leftSlot);
-      
-      // Right side slot - 45 degree angle pointing up and out
-      const rightSlot = manifold.cube([wall + 2, slotWidth, slotLength])
-        .rotate(0, 0, -45) // -45 degree rotation around Z axis
-        .translate(width / 2 + 1, y, z);
-      ventHoles.push(rightSlot);
-    }
-  }
+  // Right side - one large test slot
+  const rightSlot = slotCrossSection.extrude(wall + 2)
+    .rotate(0, 0, -45) // -45 degree rotation around Z axis
+    .translate(width / 2 + 1, 0, height / 2);
+  ventHoles.push(rightSlot);
   
-  // Create slots on the front side only (Y face) - no back side
-  for (let h = 0; h < slotsPerHeight; h++) {
-    for (let w = 0; w < slotsPerWidth; w++) {
-      const x = -width / 2 + marginFromEdge + w * slotSpacing;
-      const z = bottom + marginFromEdge + h * slotSpacing;
-      
-      // Front side slot - 45 degree angle pointing up and out
-      const frontSlot = manifold.cube([slotWidth, wall + 2, slotLength])
-        .rotate(45, 0, 0) // 45 degree rotation around X axis
-        .translate(x, -depth / 2 - 1, z);
-      ventHoles.push(frontSlot);
-    }
-  }
+  // Front side - one large test slot
+  const frontSlot = slotCrossSection.extrude(wall + 2)
+    .rotate(45, 0, 0) // 45 degree rotation around X axis
+    .translate(0, -depth / 2 - 1, height / 2);
+  ventHoles.push(frontSlot);
+  
+  console.log("Created vent holes:", ventHoles.length);
   
   return ventHoles;
 }
@@ -205,11 +185,13 @@ export async function base(
   // Try to add vent holes, but don't fail if it doesn't work
   try {
     const ventHoles = await createVentHoles(height, width, depth, wall, bottom);
+    console.log("Vent holes created:", ventHoles.length);
     
     // Subtract all vent holes
     for (const hole of ventHoles) {
       result = result.subtract(hole);
     }
+    console.log("Vent holes subtracted successfully");
   } catch (error) {
     console.warn("Failed to create vent holes:", error);
     // Continue without vent holes if there's an error
