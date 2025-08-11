@@ -136,6 +136,7 @@ async function createVentHoles(
     [holeWidth/2, holeHeight/2],
     [-holeWidth/2, holeHeight/2]
   ]).extrude(wall + 2)
+    .rotate(90, 0, 0) // Rotate to face the left side properly
     .translate(-width / 2 - 1, 0, height / 2);
   ventHoles.push(leftHole);
   
