@@ -113,7 +113,7 @@ export async function clips(
   return [clipR.trimByPlane(n, 0), clipL.trimByPlane(n, 0)];
 }
 
-// Create 45-degree angled vent slots (like USB-C slots rotated 45 degrees)
+// Create one simple rectangular hole on each side (left, right, front)
 async function createVentHoles(
   height: number,
   width: number,
@@ -125,75 +125,43 @@ async function createVentHoles(
   
   const ventHoles: Manifold[] = [];
   
-  // Create USB-C style slots rotated 45 degrees
-  const slotWidth = 3; // 3mm wide slots
-  const slotHeight = 8; // 8mm tall slots
-  const slotSpacing = 12; // 12mm between slots
-  const marginFromEdge = 10; // 10mm from edges
+  // Create one simple rectangular hole on each side
+  const holeWidth = 5; // 5mm wide
+  const holeHeight = 10; // 10mm tall
   
-  // Calculate how many slots we can fit
-  const availableHeight = Math.max(0, height - bottom - 2 * marginFromEdge);
-  const availableWidth = Math.max(0, width - 2 * marginFromEdge);
-  const availableDepth = Math.max(0, depth - 2 * marginFromEdge);
+  // Left side - one rectangular hole
+  const leftHole = new manifold.CrossSection([
+    [-holeWidth/2, -holeHeight/2],
+    [holeWidth/2, -holeHeight/2],
+    [holeWidth/2, holeHeight/2],
+    [-holeWidth/2, holeHeight/2]
+  ]).extrude(wall + 2)
+    .translate(-width / 2 - 1, 0, height / 2);
+  ventHoles.push(leftHole);
   
-  const slotsPerHeight = Math.max(0, Math.floor(availableHeight / slotSpacing));
-  const slotsPerWidth = Math.max(0, Math.floor(availableWidth / slotSpacing));
-  const slotsPerDepth = Math.max(0, Math.floor(availableDepth / slotSpacing));
+  // Right side - one rectangular hole
+  const rightHole = new manifold.CrossSection([
+    [-holeWidth/2, -holeHeight/2],
+    [holeWidth/2, -holeHeight/2],
+    [holeWidth/2, holeHeight/2],
+    [-holeWidth/2, holeHeight/2]
+  ]).extrude(wall + 2)
+    .translate(width / 2 + 1, 0, height / 2);
+  ventHoles.push(rightHole);
   
-  // Only create slots if we have space
-  if (slotsPerHeight <= 0 || slotsPerWidth <= 0 || slotsPerDepth <= 0) {
-    return ventHoles;
-  }
-  
-  // Create simple rectangular holes on left, right, and front sides
-  for (let h = 0; h < slotsPerHeight; h++) {
-    for (let w = 0; w < slotsPerWidth; w++) {
-      const x = -width / 2 + marginFromEdge + w * slotSpacing;
-      const z = bottom + marginFromEdge + h * slotSpacing;
-      
-      // Left side - simple rectangular hole
-      const leftSlot = new manifold.CrossSection([
-        [-slotWidth/2, -slotHeight/2],
-        [slotWidth/2, -slotHeight/2],
-        [slotWidth/2, slotHeight/2],
-        [-slotWidth/2, slotHeight/2]
-      ]).extrude(wall + 2)
-        .translate(-width / 2 - 1, x, z);
-      ventHoles.push(leftSlot);
-      
-      // Right side - simple rectangular hole
-      const rightSlot = new manifold.CrossSection([
-        [-slotWidth/2, -slotHeight/2],
-        [slotWidth/2, -slotHeight/2],
-        [slotWidth/2, slotHeight/2],
-        [-slotWidth/2, slotHeight/2]
-      ]).extrude(wall + 2)
-        .translate(width / 2 + 1, x, z);
-      ventHoles.push(rightSlot);
-    }
-  }
-  
-  // Create simple rectangular holes on front side (same pattern as left/right)
-  for (let h = 0; h < slotsPerHeight; h++) {
-    for (let d = 0; d < slotsPerDepth; d++) {
-      const y = -depth / 2 + marginFromEdge + d * slotSpacing;
-      const z = bottom + marginFromEdge + h * slotSpacing;
-      
-      // Front side - simple rectangular hole
-      const frontSlot = new manifold.CrossSection([
-        [-slotWidth/2, -slotHeight/2],
-        [slotWidth/2, -slotHeight/2],
-        [slotWidth/2, slotHeight/2],
-        [-slotWidth/2, slotHeight/2]
-      ]).extrude(wall + 2)
-        .translate(y, depth / 2 + 1, z);
-      ventHoles.push(frontSlot);
-    }
-  }
+  // Front side - one rectangular hole
+  const frontHole = new manifold.CrossSection([
+    [-holeWidth/2, -holeHeight/2],
+    [holeWidth/2, -holeHeight/2],
+    [holeWidth/2, holeHeight/2],
+    [-holeWidth/2, holeHeight/2]
+  ]).extrude(wall + 2)
+    .translate(0, depth / 2 + 1, height / 2);
+  ventHoles.push(frontHole);
   
   // NO BACK SIDE HOLES - back side has connectors and should remain untouched
   
-  console.log("Created 45-degree USB-C style vent slots:", ventHoles.length);
+  console.log("Created one rectangular hole on each side:", ventHoles.length);
   
   return ventHoles;
 }
