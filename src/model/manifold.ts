@@ -136,6 +136,7 @@ async function createVentHoles(
     [holeWidth/2, holeHeight/2],
     [-holeWidth/2, holeHeight/2]
   ]).extrude(wall + 2)
+    .rotate(90, 0, 0) // Rotate to face left side
     .translate(-width / 2 - 1, 0, height / 2);
   ventHoles.push(leftHole);
   
@@ -146,6 +147,7 @@ async function createVentHoles(
     [holeWidth/2, holeHeight/2],
     [-holeWidth/2, holeHeight/2]
   ]).extrude(wall + 2)
+    .rotate(90, 0, 0) // Rotate to face right side
     .translate(width / 2 + 1, 0, height / 2);
   ventHoles.push(rightHole);
   
@@ -156,6 +158,7 @@ async function createVentHoles(
     [holeWidth/2, holeHeight/2],
     [-holeWidth/2, holeHeight/2]
   ]).extrude(wall + 2)
+    .rotate(0, 90, 0) // Rotate to face front side
     .translate(0, depth / 2 + 1, height / 2);
   ventHoles.push(frontHole);
   
