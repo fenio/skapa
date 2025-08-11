@@ -125,63 +125,31 @@ async function createVentHoles(
   
   const ventHoles: Manifold[] = [];
   
-  // Create slash-shaped holes that look like "/" - diagonal cuts through the wall
-  const slashWidth = 2; // 2mm wide slashes
-  const slashHeight = 8; // 8mm tall slashes
-  const slashSpacing = 8; // 8mm between slashes
-  const marginFromEdge = 8; // 8mm from edges
+  // Create one large test slash on each side to make sure it's visible
+  const slashWidth = 4; // 4mm wide slashes
+  const slashHeight = 15; // 15mm tall slashes
   
-  // Calculate how many slashes we can fit
-  const availableHeight = Math.max(0, height - bottom - 2 * marginFromEdge);
-  const availableWidth = Math.max(0, width - 2 * marginFromEdge);
-  const availableDepth = Math.max(0, depth - 2 * marginFromEdge);
+  // Left side - one large test slash (/)
+  const leftSlash = manifold.cube([wall + 2, slashWidth, slashHeight])
+    .rotate(0, 0, 45) // 45 degree rotation to create diagonal slash
+    .translate(-width / 2 - 1, 0, height / 2);
+  ventHoles.push(leftSlash);
   
-  const slashesPerHeight = Math.max(0, Math.floor(availableHeight / slashSpacing));
-  const slashesPerWidth = Math.max(0, Math.floor(availableWidth / slashSpacing));
-  const slashesPerDepth = Math.max(0, Math.floor(availableDepth / slashSpacing));
+  // Right side - one large test slash (\)
+  const rightSlash = manifold.cube([wall + 2, slashWidth, slashHeight])
+    .rotate(0, 0, -45) // -45 degree rotation to create diagonal slash
+    .translate(width / 2 + 1, 0, height / 2);
+  ventHoles.push(rightSlash);
   
-  // Only create slashes if we have space
-  if (slashesPerHeight <= 0 || slashesPerWidth <= 0 || slashesPerDepth <= 0) {
-    return ventHoles;
-  }
-  
-  // Create slash-shaped holes on the left and right sides (X faces)
-  for (let h = 0; h < slashesPerHeight; h++) {
-    for (let d = 0; d < slashesPerDepth; d++) {
-      const y = -depth / 2 + marginFromEdge + d * slashSpacing;
-      const z = bottom + marginFromEdge + h * slashSpacing;
-      
-      // Left side slash - diagonal cut pointing up and right (/)
-      const leftSlash = manifold.cube([wall + 2, slashWidth, slashHeight])
-        .rotate(0, 0, 45) // 45 degree rotation to create diagonal slash
-        .translate(-width / 2 - 1, y, z);
-      ventHoles.push(leftSlash);
-      
-      // Right side slash - diagonal cut pointing up and left (\)
-      const rightSlash = manifold.cube([wall + 2, slashWidth, slashHeight])
-        .rotate(0, 0, -45) // -45 degree rotation to create diagonal slash
-        .translate(width / 2 + 1, y, z);
-      ventHoles.push(rightSlash);
-    }
-  }
-  
-  // Create slash-shaped holes on the front side only (Y face) - NO BACK SIDE
-  for (let h = 0; h < slashesPerHeight; h++) {
-    for (let w = 0; w < slashesPerWidth; w++) {
-      const x = -width / 2 + marginFromEdge + w * slashSpacing;
-      const z = bottom + marginFromEdge + h * slashSpacing;
-      
-      // Front side slash - diagonal cut pointing up and right (/)
-      const frontSlash = manifold.cube([slashWidth, wall + 2, slashHeight])
-        .rotate(45, 0, 0) // 45 degree rotation to create diagonal slash
-        .translate(x, -depth / 2 - 1, z); // Front side (negative Y)
-      ventHoles.push(frontSlash);
-    }
-  }
+  // Front side - one large test slash (/)
+  const frontSlash = manifold.cube([slashWidth, wall + 2, slashHeight])
+    .rotate(45, 0, 0) // 45 degree rotation to create diagonal slash
+    .translate(0, -depth / 2 - 1, height / 2); // Front side (negative Y)
+  ventHoles.push(frontSlash);
   
   // NO BACK SIDE HOLES - back side has connectors and should remain untouched
   
-  console.log("Created slash-shaped vent holes on left, right, and front sides only:", ventHoles.length);
+  console.log("Created test slash-shaped vent holes:", ventHoles.length);
   
   return ventHoles;
 }
