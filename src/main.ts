@@ -32,15 +32,15 @@ const START_WALL = 2;
 const START_BOTTOM = 3;
 
 const START_HEIGHT = 52; /* starting height in mm */
-const MIN_HEIGHT = 0; /* minimum height */
+const MIN_HEIGHT = 20; /* minimum height */
 const MAX_HEIGHT = 256; /* maximum height */
 
 const START_WIDTH = 80;
-const MIN_WIDTH = 0;
+const MIN_WIDTH = 20;
 const MAX_WIDTH = 256;
 
 const START_DEPTH = 60;
-const MIN_DEPTH = 0;
+const MIN_DEPTH = 20;
 const MAX_DEPTH = 256;
 
 /// STATE
