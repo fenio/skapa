@@ -145,7 +145,7 @@ async function createVentHoles(
     return ventHoles;
   }
   
-  // Create USB-C style slots on the left and right sides (X faces)
+  // Create simple rectangular holes on left, right, and front sides
   for (let h = 0; h < slotsPerHeight; h++) {
     for (let d = 0; d < slotsPerDepth; d++) {
       const y = -depth / 2 + marginFromEdge + d * slotSpacing;
@@ -173,14 +173,13 @@ async function createVentHoles(
     }
   }
   
-  // Create USB-C style slots on the front side only (Y face) - NO BACK SIDE
+  // Create simple rectangular holes on the front side only (NO BACK SIDE)
   for (let h = 0; h < slotsPerHeight; h++) {
     for (let w = 0; w < slotsPerWidth; w++) {
       const x = -width / 2 + marginFromEdge + w * slotSpacing;
       const z = bottom + marginFromEdge + h * slotSpacing;
       
       // Front side - simple rectangular hole
-      // Back side is at -depth/2 (where clips are), so front side is at +depth/2
       const frontSlot = new manifold.CrossSection([
         [-slotWidth/2, -slotHeight/2],
         [slotWidth/2, -slotHeight/2],
