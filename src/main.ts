@@ -10,8 +10,6 @@ import { Animate, immediate } from "./animate";
 
 import { Dyn } from "twrl";
 
-import { rangeControl, stepper } from "./controls";
-
 /// CONSTANTS
 
 // Align axes with 3D printer
@@ -40,11 +38,9 @@ const MAX_LEVELS = 5;
 
 const START_WIDTH = 80;
 const MIN_WIDTH = 10 + 2 * START_RADIUS;
-const MAX_WIDTH = 204; /* somewhat arbitrary */
 
 const START_DEPTH = 60;
 const MIN_DEPTH = 20;
-const MAX_DEPTH = 204; /* somewhat arbitrary */
 
 /// STATE
 
@@ -207,42 +203,17 @@ DIMENSIONS.forEach((dim) =>
 // Download button
 const link = document.querySelector("a")!;
 
-const controls = document.querySelector(".controls") as HTMLDivElement;
-
-const levelsControl = stepper("levels", {
-  label: "Levels",
-  min: String(MIN_LEVELS),
-  max: String(MAX_LEVELS),
-});
-controls.append(levelsControl);
-
-const widthControl = rangeControl("width", {
-  name: "Width",
-  min: String(MIN_WIDTH - 2 * START_WALL /* convert from outer to inner */),
-  max: String(MAX_WIDTH - 2 * START_WALL),
-  sliderMin: String(MIN_WIDTH - 2 * START_WALL),
-  sliderMax: "100",
-});
-controls.append(widthControl.wrapper);
-
-const depthControl = rangeControl("depth", {
-  name: "Depth",
-  min: String(MIN_DEPTH - 2 * START_WALL /* convert from outer to inner */),
-  max: String(MAX_DEPTH - 2 * START_WALL),
-  sliderMin: String(MIN_DEPTH - 2 * START_WALL),
-  sliderMax: "100",
-});
-controls.append(depthControl.wrapper);
-
 // The dimension inputs
 const inputs = {
   levels: document.querySelector("#levels")! as HTMLInputElement,
   levelsPlus: document.querySelector("#levels-plus")! as HTMLButtonElement,
   levelsMinus: document.querySelector("#levels-minus")! as HTMLButtonElement,
-  width: widthControl.input,
-  widthRange: widthControl.range,
-  depth: depthControl.input,
-  depthRange: depthControl.range,
+  width: document.querySelector("#width")! as HTMLInputElement,
+  widthRange: document.querySelector("#width-range")! as HTMLInputElement,
+  depth: document.querySelector("#depth")! as HTMLInputElement,
+  depthRange: document.querySelector("#depth-range")! as HTMLInputElement,
+  radius: document.querySelector("#radius")! as HTMLInputElement,
+  radiusRange: document.querySelector("#radius-range")! as HTMLInputElement,
 } as const;
 
 // Add change events to all dimension inputs
@@ -308,8 +279,25 @@ inputs.levelsMinus.addEventListener("click", () => {
   });
 });
 
+// radius
+(
+  [
+    [inputs.radius, "change"],
+    [inputs.radiusRange, "input"],
+  ] as const
+).forEach(([input, evnt]) => {
+  modelDimensions.radius.addListener((radius) => {
+    input.value = `${radius}`;
+  });
+  input.addEventListener(evnt, () => {
+    const radius = parseInt(input.value);
+    if (!Number.isNaN(radius))
+      modelDimensions.radius.send(Math.max(radius, 0));
+  });
+});
+
 // Add select-all on input click
-(["levels", "width", "depth"] as const).forEach((dim) => {
+(["levels", "width", "depth", "radius"] as const).forEach((dim) => {
   const input = inputs[dim];
   input.addEventListener("focus", () => {
     input.select();
@@ -536,3 +524,4 @@ function loop(nowMillis: DOMHighResTimeStamp) {
 //
 // https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame
 loop(performance.now());
+
