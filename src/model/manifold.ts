@@ -151,12 +151,12 @@ async function createVentHoles(
     .translate(width / 2 + 1, 0, height / 2);
   ventHoles.push(rightHole);
   
-  // Front side - one simple rectangular hole (larger to match sides)
+  // Front side - one simple rectangular hole (much larger to match sides)
   const frontHole = new manifold.CrossSection([
-    [-holeWidth/2 - 1, -holeHeight/2],
-    [holeWidth/2 + 1, -holeHeight/2],
-    [holeWidth/2 + 1, holeHeight/2],
-    [-holeWidth/2 - 1, holeHeight/2]
+    [-holeWidth/2 - 2, -holeHeight/2],
+    [holeWidth/2 + 2, -holeHeight/2],
+    [holeWidth/2 + 2, holeHeight/2],
+    [-holeWidth/2 - 2, holeHeight/2]
   ]).extrude(wall + 2)
     .rotate(0, 90, 0) // Rotate around Y-axis for front side
     .translate(0, depth / 2 + 1, height / 2);
