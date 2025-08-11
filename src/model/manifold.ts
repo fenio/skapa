@@ -113,7 +113,7 @@ export async function clips(
   return [clipR.trimByPlane(n, 0), clipL.trimByPlane(n, 0)];
 }
 
-// Create vent holes on the sides of the box
+// Create 45-degree angled vent slots on the sides of the box
 async function createVentHoles(
   height: number,
   width: number,
@@ -124,61 +124,56 @@ async function createVentHoles(
   const manifold = await ManifoldModule.get();
   
   const ventHoles: Manifold[] = [];
-  const holeRadius = 1.5; // 3mm diameter holes
-  const holeSpacing = 12; // 12mm between hole centers
-  const marginFromEdge = 8; // 8mm from edges
+  const slotWidth = 3; // 3mm wide slots
+  const slotLength = 8; // 8mm long slots
+  const slotSpacing = 15; // 15mm between slot centers
+  const marginFromEdge = 10; // 10mm from edges
   
-  // Calculate how many holes we can fit on each side
+  // Calculate how many slots we can fit on each side
   const availableHeight = Math.max(0, height - bottom - 2 * marginFromEdge);
   const availableWidth = Math.max(0, width - 2 * marginFromEdge);
   const availableDepth = Math.max(0, depth - 2 * marginFromEdge);
   
-  const holesPerHeight = Math.max(0, Math.floor(availableHeight / holeSpacing));
-  const holesPerWidth = Math.max(0, Math.floor(availableWidth / holeSpacing));
-  const holesPerDepth = Math.max(0, Math.floor(availableDepth / holeSpacing));
+  const slotsPerHeight = Math.max(0, Math.floor(availableHeight / slotSpacing));
+  const slotsPerWidth = Math.max(0, Math.floor(availableWidth / slotSpacing));
+  const slotsPerDepth = Math.max(0, Math.floor(availableDepth / slotSpacing));
   
-  // Only create holes if we have space
-  if (holesPerHeight <= 0 || holesPerWidth <= 0 || holesPerDepth <= 0) {
+  // Only create slots if we have space
+  if (slotsPerHeight <= 0 || slotsPerWidth <= 0 || slotsPerDepth <= 0) {
     return ventHoles;
   }
   
-  // Create holes on the left and right sides (X faces)
-  for (let h = 0; h < holesPerHeight; h++) {
-    for (let d = 0; d < holesPerDepth; d++) {
-      const y = -depth / 2 + marginFromEdge + d * holeSpacing;
-      const z = bottom + marginFromEdge + h * holeSpacing;
+  // Create slots on the left and right sides (X faces)
+  for (let h = 0; h < slotsPerHeight; h++) {
+    for (let d = 0; d < slotsPerDepth; d++) {
+      const y = -depth / 2 + marginFromEdge + d * slotSpacing;
+      const z = bottom + marginFromEdge + h * slotSpacing;
       
-      // Left side hole
-      const leftHole = manifold.cylinder(holeRadius, wall + 2, 0, 0)
-        .rotate(90, 0, 0)
+      // Left side slot - 45 degree angle pointing up and out
+      const leftSlot = manifold.cube([wall + 2, slotWidth, slotLength])
+        .rotate(0, 0, 45) // 45 degree rotation around Z axis
         .translate(-width / 2 - 1, y, z);
-      ventHoles.push(leftHole);
+      ventHoles.push(leftSlot);
       
-      // Right side hole
-      const rightHole = manifold.cylinder(holeRadius, wall + 2, 0, 0)
-        .rotate(90, 0, 0)
+      // Right side slot - 45 degree angle pointing up and out
+      const rightSlot = manifold.cube([wall + 2, slotWidth, slotLength])
+        .rotate(0, 0, -45) // -45 degree rotation around Z axis
         .translate(width / 2 + 1, y, z);
-      ventHoles.push(rightHole);
+      ventHoles.push(rightSlot);
     }
   }
   
-  // Create holes on the front and back sides (Y faces)
-  for (let h = 0; h < holesPerHeight; h++) {
-    for (let w = 0; w < holesPerWidth; w++) {
-      const x = -width / 2 + marginFromEdge + w * holeSpacing;
-      const z = bottom + marginFromEdge + h * holeSpacing;
+  // Create slots on the front side only (Y face) - no back side
+  for (let h = 0; h < slotsPerHeight; h++) {
+    for (let w = 0; w < slotsPerWidth; w++) {
+      const x = -width / 2 + marginFromEdge + w * slotSpacing;
+      const z = bottom + marginFromEdge + h * slotSpacing;
       
-      // Front side hole
-      const frontHole = manifold.cylinder(holeRadius, wall + 2, 0, 0)
-        .rotate(0, 90, 0)
+      // Front side slot - 45 degree angle pointing up and out
+      const frontSlot = manifold.cube([slotWidth, wall + 2, slotLength])
+        .rotate(45, 0, 0) // 45 degree rotation around X axis
         .translate(x, -depth / 2 - 1, z);
-      ventHoles.push(frontHole);
-      
-      // Back side hole
-      const backHole = manifold.cylinder(holeRadius, wall + 2, 0, 0)
-        .rotate(0, 90, 0)
-        .translate(x, depth / 2 + 1, z);
-      ventHoles.push(backHole);
+      ventHoles.push(frontSlot);
     }
   }
   
