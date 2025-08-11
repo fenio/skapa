@@ -170,6 +170,14 @@ async function createVentHoles(
       ]).extrude(wall + 2)
         .translate(width / 2 + 1, x, z);
       ventHoles.push(rightSlot);
+    }
+  }
+  
+  // Create simple rectangular holes on front side (same pattern as left/right)
+  for (let h = 0; h < slotsPerHeight; h++) {
+    for (let d = 0; d < slotsPerDepth; d++) {
+      const y = -depth / 2 + marginFromEdge + d * slotSpacing;
+      const z = bottom + marginFromEdge + h * slotSpacing;
       
       // Front side - simple rectangular hole
       const frontSlot = new manifold.CrossSection([
@@ -178,7 +186,7 @@ async function createVentHoles(
         [slotWidth/2, slotHeight/2],
         [-slotWidth/2, slotHeight/2]
       ]).extrude(wall + 2)
-        .translate(x, depth / 2 + 1, z); // Front side (positive Y) - NOT back side
+        .translate(y, depth / 2 + 1, z);
       ventHoles.push(frontSlot);
     }
   }
