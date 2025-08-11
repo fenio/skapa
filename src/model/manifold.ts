@@ -129,9 +129,13 @@ async function createVentHoles(
   const holeWidth = 8; // 8mm wide
   const holeHeight = 15; // 15mm tall
   
-  // Left side - one circular hole (test only)
-  const leftHole = manifold.cylinder(4, wall + 2, 0, 0)
-    .rotate(90, 0, 0) // Rotate to face the left side properly
+  // Left side - one simple rectangular hole (test only)
+  const leftHole = new manifold.CrossSection([
+    [-holeWidth/2, -holeHeight/2],
+    [holeWidth/2, -holeHeight/2],
+    [holeWidth/2, holeHeight/2],
+    [-holeWidth/2, holeHeight/2]
+  ]).extrude(wall + 2)
     .translate(-width / 2 - 1, 0, height / 2);
   ventHoles.push(leftHole);
   
