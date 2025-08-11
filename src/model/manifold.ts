@@ -179,7 +179,7 @@ async function createVentHoles(
   const holesPerHeight = heightParams.holes;
   
   // Front side can be more aggressive with height since it has more space
-  const frontHolesPerHeight = Math.max(holesPerHeight, Math.floor(availableHeight / holeSpacing));
+  const frontHolesPerHeight = Math.max(holesPerHeight, Math.floor((availableHeight + holeSpacing) / holeSpacing));
   
   // Calculate consistent base height for all sides
   const baseHeight = bottom + marginFromEdge + 2; // Start holes lower
