@@ -328,6 +328,14 @@ footer {
   padding-top: 2em;
 }
 
+.info-text {
+  margin-top: 0.5em;
+  margin-bottom: 1em;
+  text-align: center;
+  color: #666;
+  font-size: 0.9em;
+}
+
 .stepper-input-wrapper {
   display: flex;
   gap: 1em;

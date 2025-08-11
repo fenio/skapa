@@ -31,10 +31,16 @@ const START_RADIUS = 6;
 const START_WALL = 2;
 const START_BOTTOM = 3;
 
-const START_HEIGHT = 52; /* calculated manually from START_LEVELS */
-const START_LEVELS = 2;
-const MIN_LEVELS = 1;
-const MAX_LEVELS = 5;
+const START_HEIGHT = 52; /* starting height in mm */
+const MIN_HEIGHT = 12; /* minimum height (1 level) */
+const MAX_HEIGHT = 172; /* maximum height (5 levels) */
+
+// Calculate levels from height using the reverse formula
+// Original: height = levels * CLIP_HEIGHT + (levels - 1) * (40 - CLIP_HEIGHT)
+// Reverse: levels = (height + 40 - CLIP_HEIGHT) / (CLIP_HEIGHT + 40 - CLIP_HEIGHT)
+function calculateLevelsFromHeight(height: number): number {
+  return Math.round((height + 40 - CLIP_HEIGHT) / (CLIP_HEIGHT + 40 - CLIP_HEIGHT));
+}
 
 const START_WIDTH = 80;
 const MIN_WIDTH = 10 + 2 * START_RADIUS;
@@ -49,10 +55,10 @@ const MIN_DEPTH = 20;
 // the _target_ dimensions for the animations, though may
 // be (ephemerally) different from the animation values.
 
-const levels = new Dyn(START_LEVELS); /* number of clip levels */
+const height = new Dyn(START_HEIGHT); /* height in mm */
 
 const modelDimensions = {
-  height: levels.map((x) => x * CLIP_HEIGHT + (x - 1) * (40 - CLIP_HEIGHT)),
+  height: height,
   width: new Dyn(START_WIDTH),
   depth: new Dyn(START_DEPTH),
   radius: new Dyn(START_RADIUS),
@@ -205,9 +211,9 @@ const link = document.querySelector("a")!;
 
 // The dimension inputs
 const inputs = {
-  levels: document.querySelector("#levels")! as HTMLInputElement,
-  levelsPlus: document.querySelector("#levels-plus")! as HTMLButtonElement,
-  levelsMinus: document.querySelector("#levels-minus")! as HTMLButtonElement,
+  height: document.querySelector("#height")! as HTMLInputElement,
+  heightRange: document.querySelector("#height-range")! as HTMLInputElement,
+  levelsDisplay: document.querySelector("#levels-display")! as HTMLSpanElement,
   width: document.querySelector("#width")! as HTMLInputElement,
   widthRange: document.querySelector("#width-range")! as HTMLInputElement,
   depth: document.querySelector("#depth")! as HTMLInputElement,
@@ -218,31 +224,27 @@ const inputs = {
 
 // Add change events to all dimension inputs
 
-// height/levels
-([[inputs.levels, "change"]] as const).forEach(([input, evnt]) => {
-  levels.addListener((levels) => {
-    input.value = `${levels}`;
+// height
+(
+  [
+    [inputs.height, "change"],
+    [inputs.heightRange, "input"],
+  ] as const
+).forEach(([input, evnt]) => {
+  modelDimensions.height.addListener((height) => {
+    input.value = `${height}`;
   });
   input.addEventListener(evnt, () => {
-    const n = parseInt(input.value);
-    if (!Number.isNaN(n))
-      /* Clamp between min & max (currently synced manually with HTML) */
-      levels.send(Math.max(MIN_LEVELS, Math.min(n, MAX_LEVELS)));
+    const h = parseInt(input.value);
+    if (!Number.isNaN(h))
+      modelDimensions.height.send(Math.max(MIN_HEIGHT, Math.min(h, MAX_HEIGHT)));
   });
 });
 
-inputs.levelsPlus.addEventListener("click", () => {
-  const n = levels.latest + 1;
-  levels.send(Math.max(MIN_LEVELS, Math.min(n, MAX_LEVELS)));
-});
-levels.addListener((n) => {
-  inputs.levelsPlus.disabled = MAX_LEVELS <= n;
-  inputs.levelsMinus.disabled = n <= MIN_LEVELS;
-});
-
-inputs.levelsMinus.addEventListener("click", () => {
-  const n = levels.latest - 1;
-  levels.send(Math.max(1, Math.min(n, 5)));
+// Update levels display when height changes
+modelDimensions.height.addListener((height) => {
+  const levels = calculateLevelsFromHeight(height);
+  inputs.levelsDisplay.textContent = `${levels}`;
 });
 
 // width
@@ -297,7 +299,7 @@ inputs.levelsMinus.addEventListener("click", () => {
 });
 
 // Add select-all on input click
-(["levels", "width", "depth", "radius"] as const).forEach((dim) => {
+(["height", "width", "depth", "radius"] as const).forEach((dim) => {
   const input = inputs[dim];
   input.addEventListener("focus", () => {
     input.select();
