@@ -124,6 +124,20 @@ footer {
   padding-top: 2em;
 }
 
+/* Make vent hole controls more visible for debugging */
+#vent-hole-width,
+#vent-hole-height,
+#vent-hole-width-range,
+#vent-hole-height-range {
+  border: 3px solid red !important;
+  background-color: yellow !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  font-size: 20px !important;
+  padding: 10px !important;
+}
+
 .range-input-wrapper label {
   min-width: 3em;
 }

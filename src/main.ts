@@ -235,6 +235,28 @@ const inputs = {
   ventHoleHeightRange: document.querySelector("#vent-hole-height-range")! as HTMLInputElement,
 } as const;
 
+// Debug: Check if vent hole elements are found
+console.log("Vent hole width element:", document.querySelector("#vent-hole-width"));
+console.log("Vent hole height element:", document.querySelector("#vent-hole-height"));
+
+// Check if all elements are found
+const allElementsFound = [
+  "height", "height-range",
+  "width", "width-range", 
+  "depth", "depth-range",
+  "radius", "radius-range",
+  "vent-hole-width", "vent-hole-width-range",
+  "vent-hole-height", "vent-hole-height-range"
+].every(id => {
+  const element = document.querySelector(`#${id}`);
+  if (!element) {
+    console.error(`Element #${id} not found!`);
+  }
+  return element;
+});
+
+console.log("All elements found:", allElementsFound);
+
 // Add change events to all dimension inputs
 
 // height
