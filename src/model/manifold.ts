@@ -120,19 +120,24 @@ async function createVentHoles(
   depth: number,
   wall: number,
   bottom: number,
+  ventHoleSize: number = 4, // Default vent hole size in mm
 ): Promise<Manifold[]> {
   const manifold = await ManifoldModule.get();
   
   const ventHoles: Manifold[] = [];
   
-    // Create dynamic vent holes based on box size
+  // Create dynamic vent holes based on box size
   const marginFromEdge = 5; // 5mm from edges
-  const minHoleWidth = 3; // Minimum hole width
-  const maxHoleWidth = 6; // Maximum hole width
-  const minHoleHeight = 8; // Minimum hole height
-  const maxHoleHeight = 16; // Maximum hole height
-  const minSpacing = 8; // Minimum spacing between holes
-  const maxSpacing = 20; // Maximum spacing between holes
+  const minHoleWidth = 2; // Minimum hole width
+  const maxHoleWidth = 8; // Maximum hole width
+  const minHoleHeight = 6; // Minimum hole height
+  const maxHoleHeight = 20; // Maximum hole height
+  const minSpacing = 6; // Minimum spacing between holes
+  const maxSpacing = 24; // Maximum spacing between holes
+  
+  // Use the configured vent hole size, but clamp it to reasonable bounds
+  const holeWidth = Math.max(minHoleWidth, Math.min(maxHoleWidth, ventHoleSize));
+  const holeHeight = holeWidth * 2; // Make height 2x the width for good proportions
   
   // Calculate available space for holes on each side
   const availableWidth = width - 2 * marginFromEdge;
@@ -142,32 +147,29 @@ async function createVentHoles(
   // Ensure minimum available space for holes
   const minAvailableSpace = 8; // Minimum space needed for at least one hole
   
-  // Calculate optimal hole size and spacing based on available space
-  const calculateOptimalSize = (availableSpace: number, minHoles: number = 1) => {
+  // Calculate optimal spacing based on available space and hole size
+  const calculateOptimalSpacing = (availableSpace: number, minHoles: number = 1) => {
     const maxHoles = Math.max(minHoles, Math.floor(availableSpace / minSpacing));
     const optimalSpacing = Math.min(maxSpacing, Math.max(minSpacing, availableSpace / maxHoles));
-    const optimalHoleSize = Math.min(maxHoleWidth, Math.max(minHoleWidth, optimalSpacing * 0.3));
     const actualHoles = Math.max(minHoles, Math.floor(availableSpace / optimalSpacing));
     
     // Ensure holes don't extend beyond the wall boundaries
-    const totalHoleSpace = (actualHoles - 1) * optimalSpacing + optimalHoleSize;
+    const totalHoleSpace = (actualHoles - 1) * optimalSpacing + holeWidth;
     if (totalHoleSpace > availableSpace) {
       // Reduce number of holes if they don't fit
-      const maxFittingHoles = Math.max(minHoles, Math.floor((availableSpace - optimalHoleSize) / optimalSpacing) + 1);
-      return { holeSize: optimalHoleSize, spacing: optimalSpacing, holes: maxFittingHoles };
+      const maxFittingHoles = Math.max(minHoles, Math.floor((availableSpace - holeWidth) / optimalSpacing) + 1);
+      return { spacing: optimalSpacing, holes: maxFittingHoles };
     }
     
-    return { holeSize: optimalHoleSize, spacing: optimalSpacing, holes: actualHoles };
+    return { spacing: optimalSpacing, holes: actualHoles };
   };
   
   // Calculate optimal parameters for each side
-  const frontParams = calculateOptimalSize(Math.max(availableWidth, minAvailableSpace), 2);
-  const sideParams = calculateOptimalSize(Math.max(availableDepth, minAvailableSpace), 2);
-  const heightParams = calculateOptimalSize(Math.max(availableHeight, minAvailableSpace), 2);
+  const frontParams = calculateOptimalSpacing(Math.max(availableWidth, minAvailableSpace), 2);
+  const sideParams = calculateOptimalSpacing(Math.max(availableDepth, minAvailableSpace), 2);
+  const heightParams = calculateOptimalSpacing(Math.max(availableHeight, minAvailableSpace), 2);
   
-  // Use the smaller of front/side hole sizes for consistency
-  const holeWidth = Math.min(frontParams.holeSize, sideParams.holeSize);
-  const holeHeight = heightParams.holeSize * 2; // Make height 2x the width for good proportions
+  // Use consistent spacing across all sides
   const holeSpacing = Math.min(frontParams.spacing, sideParams.spacing, heightParams.spacing);
   
   // Calculate 45-degree tilt offset (tan(45°) = 1, so offset = holeHeight)
@@ -256,6 +258,7 @@ export async function base(
   radius: number,
   wall: number,
   bottom: number,
+  ventHoleSize: number = 4, // Default vent hole size in mm
 ): Promise<Manifold> {
   const innerRadius = Math.max(0, radius - wall);
   const outer = (await roundedRectangle([width, depth], radius)).extrude(
@@ -272,7 +275,7 @@ export async function base(
   
   // Try to add vent holes, but don't fail if it doesn't work
   try {
-    const ventHoles = await createVentHoles(height, width, depth, wall, bottom);
+    const ventHoles = await createVentHoles(height, width, depth, wall, bottom, ventHoleSize);
     console.log("Vent holes created:", ventHoles.length);
     
     // Subtract all vent holes
@@ -296,6 +299,7 @@ export async function box(
   radius: number,
   wall: number,
   bottom: number,
+  ventHoleSize: number = 4, // Default vent hole size in mm
 ): Promise<Manifold> {
   const padding = 5; /* mm */
   const W = width - 2 * radius - 2 * padding; // Working area
@@ -310,7 +314,7 @@ export async function box(
   const gh = 40;
   const NV = Math.floor(H / gh + 1);
 
-  let res = await base(height, width, depth, radius, wall, bottom);
+  let res = await base(height, width, depth, radius, wall, bottom, ventHoleSize);
 
   for (let i = 0; i < N; i++) {
     for (let j = 0; j < NV; j++) {

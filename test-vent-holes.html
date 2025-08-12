@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vent Hole Size Test</title>
+</head>
+<body>
+    <h1>Vent Hole Size Test</h1>
+    <div>
+        <label for="vent-hole-size">Vent Hole Size (mm):</label>
+        <input type="range" id="vent-hole-size-range" min="2" max="8" step="0.5" value="4">
+        <input type="number" id="vent-hole-size" min="2" max="8" step="0.5" value="4">
+        <span id="current-value">4</span>
+    </div>
+    <div>
+        <button onclick="testVentHoles()">Test Vent Holes</button>
+    </div>
+    <div id="output"></div>
+
+    <script type="module">
+        import { box } from './src/model/manifold.ts';
+        
+        window.testVentHoles = async function() {
+            const ventHoleSize = parseFloat(document.getElementById('vent-hole-size').value);
+            const output = document.getElementById('output');
+            
+            try {
+                output.innerHTML = 'Creating model with vent hole size: ' + ventHoleSize + 'mm...';
+                
+                // Test with different vent hole sizes
+                const model = await box(52, 80, 60, 6, 2, 3, ventHoleSize);
+                
+                output.innerHTML = 'Model created successfully! Vent hole size: ' + ventHoleSize + 'mm';
+                console.log('Model created with vent hole size:', ventHoleSize);
+                
+            } catch (error) {
+                output.innerHTML = 'Error: ' + error.message;
+                console.error('Error creating model:', error);
+            }
+        };
+        
+        // Update display when slider changes
+        document.getElementById('vent-hole-size-range').addEventListener('input', function(e) {
+            const value = e.target.value;
+            document.getElementById('vent-hole-size').value = value;
+            document.getElementById('current-value').textContent = value;
+        });
+        
+        document.getElementById('vent-hole-size').addEventListener('input', function(e) {
+            const value = e.target.value;
+            document.getElementById('vent-hole-size-range').value = value;
+            document.getElementById('current-value').textContent = value;
+        });
+    </script>
+</body>
+</html>

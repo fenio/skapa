@@ -22,6 +22,7 @@ const DIMENSIONS = [
   "radius",
   "wall",
   "bottom",
+  "ventHoleSize",
 ] as const;
 
 // constants, all in outer dimensions (when applicable)
@@ -30,6 +31,7 @@ const DIMENSIONS = [
 const START_RADIUS = 6;
 const START_WALL = 2;
 const START_BOTTOM = 3;
+const START_VENT_HOLE_SIZE = 4; // Default vent hole size in mm
 
 const START_HEIGHT = 52; /* starting height in mm */
 const MIN_HEIGHT = 20; /* minimum height */
@@ -59,6 +61,7 @@ const modelDimensions = {
   radius: new Dyn(START_RADIUS),
   wall: new Dyn(START_WALL),
   bottom: new Dyn(START_BOTTOM),
+  ventHoleSize: new Dyn(START_VENT_HOLE_SIZE),
 };
 
 const innerWidth = Dyn.sequence([
@@ -107,8 +110,9 @@ async function reloadModel(
   radius: number,
   wall: number,
   bottom: number,
+  ventHoleSize: number,
 ) {
-  const model = await box(height, width, depth, radius, wall, bottom);
+  const model = await box(height, width, depth, radius, wall, bottom, ventHoleSize);
   const geometry = mesh2geometry(model);
   geometry.computeVertexNormals(); // Make sure the geometry has normals
   mesh.geometry = geometry;
@@ -123,9 +127,10 @@ Dyn.sequence([
   modelDimensions.radius,
   modelDimensions.wall,
   modelDimensions.bottom,
-] as const).addListener(([h, w, d, r, wa, bo]) => {
+  modelDimensions.ventHoleSize,
+] as const).addListener(([h, w, d, r, wa, bo, vhs]) => {
   const filename = `skapa-${w}-${d}-${h}.3mf`;
-  tmfLoader.load(box(h, w, d, r, wa, bo), filename);
+  tmfLoader.load(box(h, w, d, r, wa, bo, vhs), filename);
 });
 
 /// RENDER
@@ -191,6 +196,7 @@ const animations = {
   radius: new Animate(START_RADIUS),
   wall: new Animate(START_WALL),
   bottom: new Animate(START_BOTTOM),
+  ventHoleSize: new Animate(START_VENT_HOLE_SIZE),
 };
 
 DIMENSIONS.forEach((dim) =>
@@ -215,6 +221,8 @@ const inputs = {
   depthRange: document.querySelector("#depth-range")! as HTMLInputElement,
   radius: document.querySelector("#radius")! as HTMLInputElement,
   radiusRange: document.querySelector("#radius-range")! as HTMLInputElement,
+  ventHoleSize: document.querySelector("#vent-hole-size")! as HTMLInputElement,
+  ventHoleSizeRange: document.querySelector("#vent-hole-size-range")! as HTMLInputElement,
 } as const;
 
 // Add change events to all dimension inputs
@@ -289,8 +297,25 @@ const inputs = {
   });
 });
 
+// vent hole size
+(
+  [
+    [inputs.ventHoleSize, "change"],
+    [inputs.ventHoleSizeRange, "input"],
+  ] as const
+).forEach(([input, evnt]) => {
+  modelDimensions.ventHoleSize.addListener((ventHoleSize) => {
+    input.value = `${ventHoleSize}`;
+  });
+  input.addEventListener(evnt, () => {
+    const ventHoleSize = parseFloat(input.value);
+    if (!Number.isNaN(ventHoleSize))
+      modelDimensions.ventHoleSize.send(Math.max(2, Math.min(ventHoleSize, 8)));
+  });
+});
+
 // Add select-all on input click
-(["height", "width", "depth", "radius"] as const).forEach((dim) => {
+(["height", "width", "depth", "radius", "ventHoleSize"] as const).forEach((dim) => {
   const input = inputs[dim];
   input.addEventListener("focus", () => {
     input.select();
@@ -492,6 +517,7 @@ function loop(nowMillis: DOMHighResTimeStamp) {
       animations["radius"].current,
       animations["wall"].current,
       animations["bottom"].current,
+      animations["ventHoleSize"].current,
     ).then(() => {
       modelLoadStarted = undefined;
       centerCameraNeeded = true;
