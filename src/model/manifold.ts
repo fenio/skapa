@@ -119,7 +119,8 @@ async function createVentHoles(
   width: number,
   depth: number,
   wall: number,
-  bottom: number,
+  ventHoleWidth: number,
+  ventHoleHeight: number,
 ): Promise<Manifold[]> {
   const manifold = await ManifoldModule.get();
   
@@ -127,10 +128,8 @@ async function createVentHoles(
   
     // Create dynamic vent holes based on box size
   const marginFromEdge = 5; // 5mm from edges
-  const minHoleWidth = 3; // Minimum hole width
-  const maxHoleWidth = 6; // Maximum hole width
-  const minHoleHeight = 8; // Minimum hole height
-  const maxHoleHeight = 16; // Maximum hole height
+  const minHoleWidth = Math.max(2, ventHoleWidth * 0.5); // Minimum hole width (50% of configured size)
+  const maxHoleWidth = Math.min(12, ventHoleWidth * 1.5); // Maximum hole width (150% of configured size)
   const minSpacing = 8; // Minimum spacing between holes
   const maxSpacing = 20; // Maximum spacing between holes
   
@@ -166,9 +165,9 @@ async function createVentHoles(
   const sideParams = calculateOptimalSize(Math.max(availableDepth, minAvailableSpace), 2);
   const heightParams = calculateOptimalSize(Math.max(availableHeight, minAvailableSpace), 2);
   
-  // Use the smaller of front/side hole sizes for consistency
-  const holeWidth = Math.min(frontParams.holeSize, sideParams.holeSize);
-  const holeHeight = heightParams.holeSize * 2; // Make height 2x the width for good proportions
+  // Use the configured vent hole sizes directly
+  const holeWidth = ventHoleWidth;
+  const holeHeight = ventHoleHeight;
   const holeSpacing = Math.min(frontParams.spacing, sideParams.spacing, heightParams.spacing);
   
   // Calculate 45-degree tilt offset (tan(45°) = 1, so offset = holeHeight)
@@ -257,6 +256,8 @@ export async function base(
   radius: number,
   wall: number,
   bottom: number,
+  ventHoleWidth: number,
+  ventHoleHeight: number,
 ): Promise<Manifold> {
   const innerRadius = Math.max(0, radius - wall);
   const outer = (await roundedRectangle([width, depth], radius)).extrude(
@@ -273,7 +274,7 @@ export async function base(
   
   // Try to add vent holes, but don't fail if it doesn't work
   try {
-    const ventHoles = await createVentHoles(height, width, depth, wall, bottom);
+    const ventHoles = await createVentHoles(height, width, depth, wall, ventHoleWidth, ventHoleHeight);
     console.log("Vent holes created:", ventHoles.length);
     
     // Subtract all vent holes
@@ -297,6 +298,8 @@ export async function box(
   radius: number,
   wall: number,
   bottom: number,
+  ventHoleWidth: number,
+  ventHoleHeight: number,
 ): Promise<Manifold> {
   const padding = 5; /* mm */
   const W = width - 2 * radius - 2 * padding; // Working area
@@ -311,7 +314,7 @@ export async function box(
   const gh = 40;
   const NV = Math.floor(H / gh + 1);
 
-  let res = await base(height, width, depth, radius, wall, bottom);
+  let res = await base(height, width, depth, radius, wall, bottom, ventHoleWidth, ventHoleHeight);
 
   for (let i = 0; i < N; i++) {
     for (let j = 0; j < NV; j++) {
