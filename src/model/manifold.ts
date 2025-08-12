@@ -137,7 +137,8 @@ async function createVentHoles(
   // Calculate available space for holes on each side
   const availableWidth = width - 2 * marginFromEdge;
   const availableDepth = depth - 2 * marginFromEdge;
-  const availableHeight = height - bottom - 2 * marginFromEdge;
+  const topMargin = marginFromEdge + 5; // Margin from top edge
+  const availableHeight = height - topMargin - marginFromEdge; // Available space from top down
   
   // Ensure minimum available space for holes
   const minAvailableSpace = 8; // Minimum space needed for at least one hole
@@ -178,8 +179,8 @@ async function createVentHoles(
   const holesPerDepth = sideParams.holes;
   const holesPerHeight = heightParams.holes;
   
-  // Calculate consistent base height for all sides
-  const baseHeight = bottom + marginFromEdge + 2; // Start holes lower
+  // Calculate consistent base height for all sides - position closer to top edges
+  const baseHeight = height - topMargin - (holesPerHeight - 1) * holeSpacing - holeHeight; // Position from top down
   
   // Create holes on left side (depth x height grid)
   for (let i = 0; i < holesPerDepth; i++) {
@@ -226,7 +227,7 @@ async function createVentHoles(
     for (let j = 0; j < holesPerHeight; j++) {
       const x = -width / 2 + marginFromEdge + i * holeSpacing;
       const y = depth / 2 + 1;
-      const z = baseHeight + j * holeSpacing - holeHeight/2; // Adjust for rotation offset
+      const z = baseHeight + j * holeSpacing; // Position from top down, no rotation offset needed
       
       // Create a 45-degree tilted rectangle cross-section for front side
       const frontHole = new manifold.CrossSection([
@@ -243,7 +244,7 @@ async function createVentHoles(
   
   // NO BACK SIDE HOLES - back side has connectors and should remain untouched
   
-  console.log(`Created ${ventHoles.length} dynamic 45-degree slash-shaped vent holes (${holesPerWidth}x${holesPerHeight} on front, ${holesPerDepth}x${holesPerHeight} on sides) - Hole size: ${holeWidth.toFixed(1)}x${holeHeight.toFixed(1)}mm, Spacing: ${holeSpacing.toFixed(1)}mm, Available space: W=${availableWidth.toFixed(1)}mm, D=${availableDepth.toFixed(1)}mm, H=${availableHeight.toFixed(1)}mm`);
+  console.log(`Created ${ventHoles.length} dynamic 45-degree slash-shaped vent holes near top edges (${holesPerWidth}x${holesPerHeight} on front, ${holesPerDepth}x${holesPerHeight} on sides) - Hole size: ${holeWidth.toFixed(1)}x${holeHeight.toFixed(1)}mm, Spacing: ${holeSpacing.toFixed(1)}mm, Top margin: ${topMargin}mm`);
   
   return ventHoles;
 }
