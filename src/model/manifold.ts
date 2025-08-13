@@ -162,21 +162,21 @@ async function createVentHoles(
     return { holeSize: optimalHoleSize, spacing: optimalSpacing, holes: actualHoles };
   };
   
-  // Calculate perfect spacing for even distribution
-  const calculatePerfectSpacing = (availableSpace: number, holeSize: number, minHoles: number = 2) => {
-    // For perfect distribution: (holes - 1) * spacing + holeSize = availableSpace
-    // Therefore: spacing = (availableSpace - holeSize) / (holes - 1)
-    const maxPossibleHoles = Math.floor((availableSpace - holeSize) / minSpacing) + 1;
-    const optimalHoles = Math.max(minHoles, Math.min(maxPossibleHoles, Math.floor(availableSpace / (holeSize + minSpacing))));
+  // Calculate professional spacing for even distribution
+  const calculateProfessionalSpacing = (availableSpace: number, holeSize: number, minHoles: number = 2) => {
+    // Calculate how many holes can fit with minimum spacing
+    const maxHoles = Math.floor((availableSpace - holeSize) / minSpacing) + 1;
+    const optimalHoles = Math.max(minHoles, Math.min(maxHoles, 6)); // Cap at 6 holes max
     
     if (optimalHoles <= 1) {
       return { holes: 1, spacing: availableSpace / 2, startOffset: (availableSpace - holeSize) / 2 };
     }
     
-    const perfectSpacing = (availableSpace - holeSize) / (optimalHoles - 1);
+    // Calculate spacing to distribute holes evenly
+    const spacing = (availableSpace - holeSize) / (optimalHoles - 1);
     const startOffset = 0; // Start from the edge margin
     
-    return { holes: optimalHoles, spacing: perfectSpacing, startOffset };
+    return { holes: optimalHoles, spacing: Math.max(spacing, minSpacing), startOffset };
   };
   
   // Calculate optimal parameters for each side
@@ -191,14 +191,21 @@ async function createVentHoles(
   // Calculate 45-degree tilt offset (tan(45°) = 1, so offset = holeHeight)
   const tiltOffset = holeHeight; // This creates a true 45-degree angle
   
-  // Calculate perfect spacing for each direction
-  const frontSpacing = calculatePerfectSpacing(availableWidth, holeWidth, 2);
-  const sideSpacing = calculatePerfectSpacing(availableDepth, holeWidth, 2);
-  const heightSpacing = calculatePerfectSpacing(availableHeight, holeHeight, 2);
+  // Calculate professional spacing for each direction
+  const frontSpacing = calculateProfessionalSpacing(availableWidth, holeWidth, 2);
+  const sideSpacing = calculateProfessionalSpacing(availableDepth, holeWidth, 2);
+  const heightSpacing = calculateProfessionalSpacing(availableHeight, holeHeight, 2);
   
   const holesPerWidth = frontSpacing.holes;
   const holesPerDepth = sideSpacing.holes;
   const holesPerHeight = heightSpacing.holes;
+  
+  console.log(`Spacing calculations:`, {
+    availableWidth, availableDepth, availableHeight,
+    holeWidth, holeHeight,
+    frontSpacing, sideSpacing, heightSpacing,
+    holesPerWidth, holesPerDepth, holesPerHeight
+  });
   
   // Calculate consistent base height for all sides
   const baseHeight = bottom + marginFromEdge + 2; // Start holes lower
