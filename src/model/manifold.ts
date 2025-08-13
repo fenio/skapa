@@ -242,24 +242,28 @@ async function createVentHoles(
   }
   
   // Create holes on bottom side (width x depth grid)
+  let bottomHoleCount = 0;
   for (let i = 0; i < holesPerWidth; i++) {
     for (let j = 0; j < holesPerDepth; j++) {
       const x = -width / 2 + marginFromEdge + i * holeSpacing;
       const y = -depth / 2 + marginFromEdge + j * holeSpacing;
-      const z = 0; // Position at the very bottom surface
+      const z = bottom / 2; // Position in the middle of the bottom thickness
       
       // Create a 45-degree tilted rectangle cross-section for bottom side (consistent with other sides)
+      // For bottom holes, we create the tilted shape in the XY plane and extrude through the bottom
       const bottomHole = new manifold.CrossSection([
         [-holeWidth/2, -holeHeight/2], // Bottom left
         [holeWidth/2, -holeHeight/2], // Bottom right
         [holeWidth/2 + tiltOffset, holeHeight/2], // Top right (45° tilted)
         [-holeWidth/2 + tiltOffset, holeHeight/2] // Top left (45° tilted)
-      ]).extrude(bottom + 2)
-        .rotate(180, 0, 0) // Rotate around X-axis to face downward
+      ]).extrude(bottom + 2) // Extrude through the entire bottom thickness
         .translate(x, y, z);
       ventHoles.push(bottomHole);
+      bottomHoleCount++;
     }
   }
+  
+  console.log(`Created ${bottomHoleCount} bottom vent holes at z=${bottom/2}, bottom thickness=${bottom}mm`);
   
   // NO BACK SIDE HOLES - back side has connectors and should remain untouched
   
