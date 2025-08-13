@@ -162,21 +162,11 @@ async function createVentHoles(
     return { holeSize: optimalHoleSize, spacing: optimalSpacing, holes: actualHoles };
   };
   
-  // Calculate professional spacing for even distribution
-  const calculateProfessionalSpacing = (availableSpace: number, holeSize: number, minHoles: number = 2) => {
-    // Calculate how many holes can fit with minimum spacing
-    const maxHoles = Math.floor((availableSpace - holeSize) / minSpacing) + 1;
-    const optimalHoles = Math.max(minHoles, Math.min(maxHoles, 6)); // Cap at 6 holes max
-    
-    if (optimalHoles <= 1) {
-      return { holes: 1, spacing: availableSpace / 2, startOffset: (availableSpace - holeSize) / 2 };
-    }
-    
-    // Calculate spacing to distribute holes evenly
-    const spacing = (availableSpace - holeSize) / (optimalHoles - 1);
-    const startOffset = 0; // Start from the edge margin
-    
-    return { holes: optimalHoles, spacing: Math.max(spacing, minSpacing), startOffset };
+  // Simple spacing calculation that works
+  const calculateSimpleSpacing = (availableSpace: number, holeSize: number) => {
+    const holes = Math.max(2, Math.min(4, Math.floor(availableSpace / (holeSize + minSpacing))));
+    const spacing = (availableSpace - holeSize) / (holes - 1);
+    return { holes, spacing: Math.max(spacing, minSpacing) };
   };
   
   // Calculate optimal parameters for each side
@@ -191,28 +181,23 @@ async function createVentHoles(
   // Calculate 45-degree tilt offset (tan(45°) = 1, so offset = holeHeight)
   const tiltOffset = holeHeight; // This creates a true 45-degree angle
   
-  // Calculate professional spacing for each direction
-  const frontSpacing = calculateProfessionalSpacing(availableWidth, holeWidth, 2);
-  const sideSpacing = calculateProfessionalSpacing(availableDepth, holeWidth, 2);
-  const heightSpacing = calculateProfessionalSpacing(availableHeight, holeHeight, 2);
+  // Use simple spacing calculation
+  const frontSpacing = calculateSimpleSpacing(availableWidth, holeWidth);
+  const sideSpacing = calculateSimpleSpacing(availableDepth, holeWidth);
+  const heightSpacing = calculateSimpleSpacing(availableHeight, holeHeight);
   
   const holesPerWidth = frontSpacing.holes;
   const holesPerDepth = sideSpacing.holes;
   const holesPerHeight = heightSpacing.holes;
   
-  console.log(`Spacing calculations:`, {
-    availableWidth, availableDepth, availableHeight,
-    holeWidth, holeHeight,
-    frontSpacing, sideSpacing, heightSpacing,
-    holesPerWidth, holesPerDepth, holesPerHeight
-  });
+  console.log(`Simple spacing:`, { holesPerWidth, holesPerDepth, holesPerHeight, frontSpacing, sideSpacing, heightSpacing });
   
   // Calculate consistent base height for all sides
   const baseHeight = bottom + marginFromEdge + 2; // Start holes lower
   
-  // Calculate perfect positioning for each side
-  const sideStartY = -depth / 2 + marginFromEdge + sideSpacing.startOffset + 8; // Add extra margin from back
-  const heightStartZ = baseHeight + heightSpacing.startOffset;
+  // Simple positioning
+  const sideStartY = -depth / 2 + marginFromEdge + 8; // Add extra margin from back
+  const heightStartZ = baseHeight;
   
   // Create holes on left side (depth x height grid)
   for (let i = 0; i < holesPerDepth; i++) {
@@ -255,7 +240,7 @@ async function createVentHoles(
   }
   
   // Create holes on front side (width x height grid)
-  const frontStartX = -width / 2 + marginFromEdge + frontSpacing.startOffset;
+  const frontStartX = -width / 2 + marginFromEdge;
   
   for (let i = 0; i < holesPerWidth; i++) {
     for (let j = 0; j < holesPerHeight; j++) {
@@ -278,8 +263,8 @@ async function createVentHoles(
   
   // Create holes on bottom side (width x depth grid)
   let bottomHoleCount = 0;
-  const bottomStartX = -width / 2 + marginFromEdge + frontSpacing.startOffset + 8; // Add extra margin from left
-  const bottomStartY = -depth / 2 + marginFromEdge + sideSpacing.startOffset + 8; // Add extra margin from back
+  const bottomStartX = -width / 2 + marginFromEdge + 8; // Add extra margin from left
+  const bottomStartY = -depth / 2 + marginFromEdge + 8; // Add extra margin from back
   
   for (let i = 0; i < holesPerWidth; i++) {
     for (let j = 0; j < holesPerDepth; j++) {
