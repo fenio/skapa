@@ -7,6 +7,8 @@ import manifold_wasm from "manifold-3d/manifold.wasm?url";
 
 export const CLIP_HEIGHT = 12;
 
+const PLATE_THICKNESS = 4; // mm
+
 // Load manifold 3d
 class ManifoldModule {
   private static wasm: ManifoldToplevel | undefined = undefined;
@@ -396,33 +398,46 @@ export async function base(
 export async function box(
   height: number,
   width: number,
-  depth: number,
-  radius: number,
-  wall: number,
-  bottom: number,
 ): Promise<Manifold> {
+  const manifold = await ManifoldModule.get();
+
+  // Create a flat back plate of width x height, extruded along Z by height previously,
+  // but here we extrude along Z by height and use Y as thickness.
+  // Build plate cross-section in XY: width x thickness, centered at origin.
+  const halfW = width / 2;
+  const halfT = PLATE_THICKNESS / 2;
+  const plate2D = new manifold.CrossSection([
+    [-halfW, -halfT],
+    [halfW, -halfT],
+    [halfW, halfT],
+    [-halfW, halfT],
+  ]);
+  let res = plate2D.extrude(height);
+
+  // Place clips on the back (negative Y) side of the plate
   const padding = 5; /* mm */
-  const W = width - 2 * radius - 2 * padding; // Working area
-  const gw = 40; // (horizontal) gap between clip origins
-  const N = Math.floor(W / gw + 1); // How many (pairs of) clips we can fit
+  const gw = 40; // horizontal gap between clip origins
+  const gh = 40; // vertical gap between clip rows
+
+  // Horizontal placement
+  const W = width - 2 * padding; // working width
+  const N = Math.max(1, Math.floor(W / gw + 1)); // at least one pair
   const M = N - 1;
-  const dx = ((-1 * M) / 2) * gw; // where to place the clips
+  const dx = ((-1 * M) / 2) * gw;
 
-  // Same as horizontal, but vertically (slightly simpler because we always start
-  // from 0 and we don't need to take the radius into account)
-  const H = height - CLIP_HEIGHT; // Total height minus clip height
-  const gh = 40;
-  const NV = Math.floor(H / gh + 1);
-
-  let res = await base(height, width, depth, radius, wall, bottom);
+  // Vertical placement: stack rows, leaving space for the clip height
+  const H = Math.max(0, height - CLIP_HEIGHT);
+  const NV = Math.max(1, Math.floor(H / gh + 1));
 
   for (let i = 0; i < N; i++) {
     for (let j = 0; j < NV; j++) {
-      // For all but the first level, chamfer the clips
       const chamfer = j > 0;
       const [clipL, clipR] = await clips(chamfer);
-      res = res.add(clipL.translate(i * gw + dx, -depth / 2, j * gh));
-      res = res.add(clipR.translate(i * gw + dx, -depth / 2, j * gh));
+      const z = j * gh;
+      const x = i * gw + dx;
+      const y = -PLATE_THICKNESS / 2; // back face of plate
+      res = res.add(clipL.translate(x, y, z));
+      res = res.add(clipR.translate(x, y, z));
     }
   }
 

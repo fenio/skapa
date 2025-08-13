@@ -18,19 +18,11 @@ THREE.Object3D.DEFAULT_UP = new THREE.Vector3(0, 0, 1);
 const DIMENSIONS = [
   "height",
   "width",
-  "depth",
-  "radius",
-  "wall",
-  "bottom",
 ] as const;
 
 // constants, all in outer dimensions (when applicable)
 
 // actual constants
-const START_RADIUS = 6;
-const START_WALL = 2;
-const START_BOTTOM = 3;
-
 const START_HEIGHT = 52; /* starting height in mm */
 const MIN_HEIGHT = 20; /* minimum height */
 const MAX_HEIGHT = 256; /* maximum height */
@@ -38,10 +30,6 @@ const MAX_HEIGHT = 256; /* maximum height */
 const START_WIDTH = 80;
 const MIN_WIDTH = 20;
 const MAX_WIDTH = 256;
-
-const START_DEPTH = 60;
-const MIN_DEPTH = 20;
-const MAX_DEPTH = 256;
 
 /// STATE
 
@@ -55,21 +43,7 @@ const height = new Dyn(START_HEIGHT); /* height in mm */
 const modelDimensions = {
   height: height,
   width: new Dyn(START_WIDTH),
-  depth: new Dyn(START_DEPTH),
-  radius: new Dyn(START_RADIUS),
-  wall: new Dyn(START_WALL),
-  bottom: new Dyn(START_BOTTOM),
 };
-
-const innerWidth = Dyn.sequence([
-  modelDimensions.wall,
-  modelDimensions.width,
-] as const).map(([wall, width]) => width - 2 * wall);
-
-const innerDepth = Dyn.sequence([
-  modelDimensions.wall,
-  modelDimensions.depth,
-] as const).map(([wall, depth]) => depth - 2 * wall);
 
 // Current state of part positioning
 type PartPositionStatic = Extract<PartPosition, { tag: "static" }>;
@@ -103,12 +77,8 @@ const tmfLoader = new TMFLoader();
 async function reloadModel(
   height: number,
   width: number,
-  depth: number,
-  radius: number,
-  wall: number,
-  bottom: number,
 ) {
-  const model = await box(height, width, depth, radius, wall, bottom);
+  const model = await box(height, width);
   const geometry = mesh2geometry(model);
   geometry.computeVertexNormals(); // Make sure the geometry has normals
   mesh.geometry = geometry;
@@ -119,13 +89,9 @@ async function reloadModel(
 Dyn.sequence([
   modelDimensions.height,
   modelDimensions.width,
-  modelDimensions.depth,
-  modelDimensions.radius,
-  modelDimensions.wall,
-  modelDimensions.bottom,
-] as const).addListener(([h, w, d, r, wa, bo]) => {
-  const filename = `skapa-${w}-${d}-${h}.3mf`;
-  tmfLoader.load(box(h, w, d, r, wa, bo), filename);
+] as const).addListener(([h, w]) => {
+  const filename = `skapa-${w}-${h}.3mf`;
+  tmfLoader.load(box(h, w), filename);
 });
 
 /// RENDER
@@ -138,7 +104,7 @@ const mesh: THREE.Mesh = new THREE.Mesh(
   new THREE.BoxGeometry(
     modelDimensions.width.latest,
     modelDimensions.height.latest,
-    modelDimensions.depth.latest,
+    4, // plate thickness (visual placeholder, replaced on first load)
   ),
   new THREE.Material(),
 );
@@ -187,10 +153,6 @@ partPositioning.addListener((val) => {
 const animations = {
   height: new Animate(START_HEIGHT),
   width: new Animate(START_WIDTH),
-  depth: new Animate(START_DEPTH),
-  radius: new Animate(START_RADIUS),
-  wall: new Animate(START_WALL),
-  bottom: new Animate(START_BOTTOM),
 };
 
 DIMENSIONS.forEach((dim) =>
@@ -211,21 +173,15 @@ const inputs = {
 
   width: document.querySelector("#width")! as HTMLInputElement,
   widthRange: document.querySelector("#width-range")! as HTMLInputElement,
-  depth: document.querySelector("#depth")! as HTMLInputElement,
-  depthRange: document.querySelector("#depth-range")! as HTMLInputElement,
-  radius: document.querySelector("#radius")! as HTMLInputElement,
-  radiusRange: document.querySelector("#radius-range")! as HTMLInputElement,
 } as const;
 
 // Add change events to all dimension inputs
 
 // height
-(
-  [
-    [inputs.height, "change"],
-    [inputs.heightRange, "input"],
-  ] as const
-).forEach(([input, evnt]) => {
+([
+  [inputs.height, "change"],
+  [inputs.heightRange, "input"],
+] as const).forEach(([input, evnt]) => {
   modelDimensions.height.addListener((height) => {
     input.value = `${height}`;
   });
@@ -236,61 +192,23 @@ const inputs = {
   });
 });
 
-
-
 // width
-(
-  [
-    [inputs.width, "change"],
-    [inputs.widthRange, "input"],
-  ] as const
-).forEach(([input, evnt]) => {
-  innerWidth.addListener((width) => {
+([
+  [inputs.width, "change"],
+  [inputs.widthRange, "input"],
+] as const).forEach(([input, evnt]) => {
+  modelDimensions.width.addListener((width) => {
     input.value = `${width}`;
   });
   input.addEventListener(evnt, () => {
-    const outer = parseInt(input.value) + 2 * modelDimensions.wall.latest;
+    const outer = parseInt(input.value);
     if (!Number.isNaN(outer))
       modelDimensions.width.send(Math.max(MIN_WIDTH, Math.min(outer, MAX_WIDTH)));
   });
 });
 
-// depth
-(
-  [
-    [inputs.depth, "change"],
-    [inputs.depthRange, "input"],
-  ] as const
-).forEach(([input, evnt]) => {
-  innerDepth.addListener((depth) => {
-    input.value = `${depth}`;
-  });
-  input.addEventListener(evnt, () => {
-    const outer = parseInt(input.value) + 2 * modelDimensions.wall.latest;
-    if (!Number.isNaN(outer))
-      modelDimensions.depth.send(Math.max(MIN_DEPTH, Math.min(outer, MAX_DEPTH)));
-  });
-});
-
-// radius
-(
-  [
-    [inputs.radius, "change"],
-    [inputs.radiusRange, "input"],
-  ] as const
-).forEach(([input, evnt]) => {
-  modelDimensions.radius.addListener((radius) => {
-    input.value = `${radius}`;
-  });
-  input.addEventListener(evnt, () => {
-    const radius = parseInt(input.value);
-    if (!Number.isNaN(radius))
-      modelDimensions.radius.send(Math.max(radius, 0));
-  });
-});
-
 // Add select-all on input click
-(["height", "width", "depth", "radius"] as const).forEach((dim) => {
+(["height", "width"] as const).forEach((dim) => {
   const input = inputs[dim];
   input.addEventListener("focus", () => {
     input.select();
@@ -488,10 +406,6 @@ function loop(nowMillis: DOMHighResTimeStamp) {
     reloadModel(
       animations["height"].current,
       animations["width"].current,
-      animations["depth"].current,
-      animations["radius"].current,
-      animations["wall"].current,
-      animations["bottom"].current,
     ).then(() => {
       modelLoadStarted = undefined;
       centerCameraNeeded = true;
