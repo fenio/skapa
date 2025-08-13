@@ -162,11 +162,12 @@ async function createVentHoles(
     return { holeSize: optimalHoleSize, spacing: optimalSpacing, holes: actualHoles };
   };
   
-  // Simple spacing calculation that works
-  const calculateSimpleSpacing = (availableSpace: number, holeSize: number) => {
-    const holes = Math.max(2, Math.min(4, Math.floor(availableSpace / (holeSize + minSpacing))));
-    const spacing = (availableSpace - holeSize) / (holes - 1);
-    return { holes, spacing: Math.max(spacing, minSpacing) };
+  // Guaranteed working spacing calculation
+  const calculateGuaranteedSpacing = (availableSpace: number, holeSize: number) => {
+    // Always create at least 2 holes, maximum 4
+    const holes = Math.max(2, Math.min(4, Math.floor(availableSpace / 20))); // Use 20mm as base spacing
+    const spacing = Math.max(12, (availableSpace - holeSize) / (holes - 1)); // Minimum 12mm spacing
+    return { holes, spacing };
   };
   
   // Calculate optimal parameters for each side
@@ -181,16 +182,21 @@ async function createVentHoles(
   // Calculate 45-degree tilt offset (tan(45°) = 1, so offset = holeHeight)
   const tiltOffset = holeHeight; // This creates a true 45-degree angle
   
-  // Use simple spacing calculation
-  const frontSpacing = calculateSimpleSpacing(availableWidth, holeWidth);
-  const sideSpacing = calculateSimpleSpacing(availableDepth, holeWidth);
-  const heightSpacing = calculateSimpleSpacing(availableHeight, holeHeight);
+  // Use guaranteed spacing calculation
+  const frontSpacing = calculateGuaranteedSpacing(availableWidth, holeWidth);
+  const sideSpacing = calculateGuaranteedSpacing(availableDepth, holeWidth);
+  const heightSpacing = calculateGuaranteedSpacing(availableHeight, holeHeight);
   
-  const holesPerWidth = frontSpacing.holes;
-  const holesPerDepth = sideSpacing.holes;
-  const holesPerHeight = heightSpacing.holes;
+  const holesPerWidth = Math.max(2, frontSpacing.holes);
+  const holesPerDepth = Math.max(2, sideSpacing.holes);
+  const holesPerHeight = Math.max(2, heightSpacing.holes);
   
-  console.log(`Simple spacing:`, { holesPerWidth, holesPerDepth, holesPerHeight, frontSpacing, sideSpacing, heightSpacing });
+  console.log(`Guaranteed spacing:`, { 
+    availableWidth, availableDepth, availableHeight,
+    holeWidth, holeHeight,
+    holesPerWidth, holesPerDepth, holesPerHeight, 
+    frontSpacing, sideSpacing, heightSpacing 
+  });
   
   // Calculate consistent base height for all sides
   const baseHeight = bottom + marginFromEdge + 2; // Start holes lower
