@@ -247,16 +247,15 @@ async function createVentHoles(
     for (let j = 0; j < holesPerBottomDepth; j++) {
       const x = -width / 2 + marginFromEdge + i * holeSpacing;
       const y = -depth / 2 + marginFromEdge + j * holeSpacing;
-      const z = 0; // Position at the bottom surface (origin is middle of bottom face)
+      const z = 0; // Position at the bottom surface (z=0 is the bottom)
       
-      // Create a 45-degree tilted rectangle cross-section for bottom side (consistent with other sides)
+      // Create a simple rectangular hole for bottom side first (to test positioning)
       const bottomHole = new manifold.CrossSection([
-        [-holeWidth/2, -holeHeight/2], // Bottom left
-        [holeWidth/2, -holeHeight/2], // Bottom right
-        [holeWidth/2 + tiltOffset, holeHeight/2], // Top right (45° tilted)
-        [-holeWidth/2 + tiltOffset, holeHeight/2] // Top left (45° tilted)
+        [-holeWidth/2, -holeWidth/2], // Bottom left
+        [holeWidth/2, -holeWidth/2], // Bottom right
+        [holeWidth/2, holeWidth/2], // Top right
+        [-holeWidth/2, holeWidth/2] // Top left
       ]).extrude(bottom + 2) // Extrude through the bottom thickness
-        .rotate(180, 0, 0) // Rotate around X-axis to face downward
         .translate(x, y, z);
       ventHoles.push(bottomHole);
     }
@@ -265,6 +264,7 @@ async function createVentHoles(
   // NO BACK SIDE HOLES - back side has connectors and should remain untouched
   
   console.log(`Created ${ventHoles.length} consistent vent holes (${holesPerWidth}x${holesPerHeight} on front, ${holesPerDepth}x${holesPerHeight} on sides, ${holesPerBottomWidth}x${holesPerBottomDepth} on bottom) - Hole size: ${holeWidth.toFixed(1)}x${holeHeight.toFixed(1)}mm, Spacing: ${holeSpacing.toFixed(1)}mm, Available space: W=${availableWidth.toFixed(1)}mm, D=${availableDepth.toFixed(1)}mm, H=${availableHeight.toFixed(1)}mm`);
+  console.log(`Bottom holes: ${holesPerBottomWidth}x${holesPerBottomDepth} = ${holesPerBottomWidth * holesPerBottomDepth} holes at z=0`);
   
   return ventHoles;
 }
