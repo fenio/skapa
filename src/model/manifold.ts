@@ -247,7 +247,7 @@ async function createVentHoles(
     for (let j = 0; j < holesPerBottomDepth; j++) {
       const x = -width / 2 + marginFromEdge + i * holeSpacing;
       const y = -depth / 2 + marginFromEdge + j * holeSpacing;
-      const z = bottom - 1; // Slightly below the bottom surface
+      const z = 0; // Position at the bottom surface (origin is middle of bottom face)
       
       // Create a 45-degree tilted rectangle cross-section for bottom side (consistent with other sides)
       const bottomHole = new manifold.CrossSection([
