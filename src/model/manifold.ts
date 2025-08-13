@@ -113,19 +113,20 @@ export async function clips(
   return [clipR.trimByPlane(n, 0), clipL.trimByPlane(n, 0)];
 }
 
-// Create one simple rectangular hole on each side (left, right, front)
+// Create vent holes on sides, front, bottom, and between clips on back
 async function createVentHoles(
   height: number,
   width: number,
   depth: number,
   wall: number,
   bottom: number,
+  radius: number,
 ): Promise<Manifold[]> {
   const manifold = await ManifoldModule.get();
   
   const ventHoles: Manifold[] = [];
   
-    // Create dynamic vent holes based on box size
+  // Create dynamic vent holes based on box size
   const marginFromEdge = 5; // 5mm from edges
   const minHoleWidth = 3; // Minimum hole width
   const maxHoleWidth = 6; // Maximum hole width
@@ -241,9 +242,71 @@ async function createVentHoles(
     }
   }
   
-  // NO BACK SIDE HOLES - back side has connectors and should remain untouched
+  // Create holes on bottom side (width x depth grid)
+  const bottomParams = calculateOptimalSize(Math.max(availableWidth, minAvailableSpace), 3);
+  const bottomDepthParams = calculateOptimalSize(Math.max(availableDepth, minAvailableSpace), 3);
+  const bottomHoleSize = Math.min(bottomParams.holeSize, bottomDepthParams.holeSize);
+  const bottomSpacing = Math.min(bottomParams.spacing, bottomDepthParams.spacing);
+  const holesPerBottomWidth = bottomParams.holes;
+  const holesPerBottomDepth = bottomDepthParams.holes;
   
-  console.log(`Created ${ventHoles.length} dynamic 45-degree slash-shaped vent holes (${holesPerWidth}x${holesPerHeight} on front, ${holesPerDepth}x${holesPerHeight} on sides) - Hole size: ${holeWidth.toFixed(1)}x${holeHeight.toFixed(1)}mm, Spacing: ${holeSpacing.toFixed(1)}mm, Available space: W=${availableWidth.toFixed(1)}mm, D=${availableDepth.toFixed(1)}mm, H=${availableHeight.toFixed(1)}mm`);
+  for (let i = 0; i < holesPerBottomWidth; i++) {
+    for (let j = 0; j < holesPerBottomDepth; j++) {
+      const x = -width / 2 + marginFromEdge + i * bottomSpacing;
+      const y = -depth / 2 + marginFromEdge + j * bottomSpacing;
+      const z = -1; // Slightly below the bottom surface
+      
+      // Create circular holes on bottom for better airflow
+      const bottomHole = new manifold.CrossSection()
+        .circle(bottomHoleSize / 2, 16) // 16 segments for smooth circle
+        .extrude(bottom + 2)
+        .translate(x, y, z);
+      ventHoles.push(bottomHole);
+    }
+  }
+  
+  // Create holes between clips on back side
+  // Calculate clip positions based on the same logic as in the box function
+  const padding = 5; /* mm */
+  const W = width - 2 * radius - 2 * padding; // Working area
+  const gw = 40; // (horizontal) gap between clip origins
+  const N = Math.floor(W / gw + 1); // How many (pairs of) clips we can fit
+  const M = N - 1;
+  const dx = ((-1 * M) / 2) * gw; // where to place the clips
+  
+  // Same as horizontal, but vertically
+  const H = height - CLIP_HEIGHT; // Total height minus clip height
+  const gh = 40;
+  const NV = Math.floor(H / gh + 1);
+  
+  // Create holes between clip pairs on back side
+  const backHoleSize = holeWidth * 0.8; // Slightly smaller than side holes
+  const backHoleHeight = holeHeight * 0.8;
+  
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < NV; j++) {
+      const clipX = i * gw + dx;
+      const clipZ = j * gh;
+      
+      // Position holes between the two clips in each pair
+      const holeX = clipX;
+      const holeY = -depth / 2 + 1; // Back side
+      const holeZ = clipZ + CLIP_HEIGHT / 2; // Center between clips
+      
+      // Create a vertical rectangular hole between clips
+      const backHole = new manifold.CrossSection([
+        [-backHoleSize/2, -backHoleHeight/2],
+        [backHoleSize/2, -backHoleHeight/2],
+        [backHoleSize/2, backHoleHeight/2],
+        [-backHoleSize/2, backHoleHeight/2]
+      ]).extrude(wall + 2)
+        .rotate(0, 0, 0) // No rotation needed for back side
+        .translate(holeX, holeY, holeZ);
+      ventHoles.push(backHole);
+    }
+  }
+  
+  console.log(`Created ${ventHoles.length} dynamic vent holes (${holesPerWidth}x${holesPerHeight} on front, ${holesPerDepth}x${holesPerHeight} on sides, ${holesPerBottomWidth}x${holesPerBottomDepth} on bottom, ${N}x${NV} between clips on back) - Hole size: ${holeWidth.toFixed(1)}x${holeHeight.toFixed(1)}mm, Spacing: ${holeSpacing.toFixed(1)}mm`);
   
   return ventHoles;
 }
@@ -272,7 +335,7 @@ export async function base(
   
   // Try to add vent holes, but don't fail if it doesn't work
   try {
-    const ventHoles = await createVentHoles(height, width, depth, wall, bottom);
+    const ventHoles = await createVentHoles(height, width, depth, wall, bottom, radius);
     console.log("Vent holes created:", ventHoles.length);
     
     // Subtract all vent holes
