@@ -113,7 +113,7 @@ export async function clips(
   return [clipR.trimByPlane(n, 0), clipL.trimByPlane(n, 0)];
 }
 
-// Create one simple rectangular hole on each side (left, right, front)
+// Create consistent vent holes on all sides except back (which has connectors)
 async function createVentHoles(
   height: number,
   width: number,
@@ -125,12 +125,10 @@ async function createVentHoles(
   
   const ventHoles: Manifold[] = [];
   
-    // Create dynamic vent holes based on box size
+  // Create dynamic vent holes based on box size
   const marginFromEdge = 5; // 5mm from edges
   const minHoleWidth = 3; // Minimum hole width
   const maxHoleWidth = 6; // Maximum hole width
-  const minHoleHeight = 8; // Minimum hole height
-  const maxHoleHeight = 16; // Maximum hole height
   const minSpacing = 8; // Minimum spacing between holes
   const maxSpacing = 20; // Maximum spacing between holes
   
@@ -164,11 +162,12 @@ async function createVentHoles(
   const frontParams = calculateOptimalSize(Math.max(availableWidth, minAvailableSpace), 2);
   const sideParams = calculateOptimalSize(Math.max(availableDepth, minAvailableSpace), 2);
   const heightParams = calculateOptimalSize(Math.max(availableHeight, minAvailableSpace), 2);
+  const bottomParams = calculateOptimalSize(Math.max(availableWidth, minAvailableSpace), 2);
   
-  // Use the smaller of front/side hole sizes for consistency
-  const holeWidth = Math.min(frontParams.holeSize, sideParams.holeSize);
+  // Use consistent hole size across all sides for uniform appearance
+  const holeWidth = Math.min(frontParams.holeSize, sideParams.holeSize, bottomParams.holeSize);
   const holeHeight = heightParams.holeSize * 2; // Make height 2x the width for good proportions
-  const holeSpacing = Math.min(frontParams.spacing, sideParams.spacing, heightParams.spacing);
+  const holeSpacing = Math.min(frontParams.spacing, sideParams.spacing, heightParams.spacing, bottomParams.spacing);
   
   // Calculate 45-degree tilt offset (tan(45°) = 1, so offset = holeHeight)
   const tiltOffset = holeHeight; // This creates a true 45-degree angle
@@ -177,6 +176,8 @@ async function createVentHoles(
   const holesPerWidth = frontParams.holes;
   const holesPerDepth = sideParams.holes;
   const holesPerHeight = heightParams.holes;
+  const holesPerBottomWidth = bottomParams.holes;
+  const holesPerBottomDepth = Math.max(1, Math.floor(availableDepth / holeSpacing));
   
   // Calculate consistent base height for all sides
   const baseHeight = bottom + marginFromEdge + 2; // Start holes lower
@@ -241,9 +242,28 @@ async function createVentHoles(
     }
   }
   
+  // Create holes on bottom side (width x depth grid) - NEW!
+  for (let i = 0; i < holesPerBottomWidth; i++) {
+    for (let j = 0; j < holesPerBottomDepth; j++) {
+      const x = -width / 2 + marginFromEdge + i * holeSpacing;
+      const y = -depth / 2 + marginFromEdge + j * holeSpacing;
+      const z = bottom - 1; // Slightly below the bottom surface
+      
+      // Create a simple rectangular hole for bottom (no tilt needed for bottom)
+      const bottomHole = new manifold.CrossSection([
+        [-holeWidth/2, -holeWidth/2], // Bottom left
+        [holeWidth/2, -holeWidth/2], // Bottom right
+        [holeWidth/2, holeWidth/2], // Top right
+        [-holeWidth/2, holeWidth/2] // Top left
+      ]).extrude(bottom + 2) // Extrude through the bottom thickness
+        .translate(x, y, z);
+      ventHoles.push(bottomHole);
+    }
+  }
+  
   // NO BACK SIDE HOLES - back side has connectors and should remain untouched
   
-  console.log(`Created ${ventHoles.length} dynamic 45-degree slash-shaped vent holes (${holesPerWidth}x${holesPerHeight} on front, ${holesPerDepth}x${holesPerHeight} on sides) - Hole size: ${holeWidth.toFixed(1)}x${holeHeight.toFixed(1)}mm, Spacing: ${holeSpacing.toFixed(1)}mm, Available space: W=${availableWidth.toFixed(1)}mm, D=${availableDepth.toFixed(1)}mm, H=${availableHeight.toFixed(1)}mm`);
+  console.log(`Created ${ventHoles.length} consistent vent holes (${holesPerWidth}x${holesPerHeight} on front, ${holesPerDepth}x${holesPerHeight} on sides, ${holesPerBottomWidth}x${holesPerBottomDepth} on bottom) - Hole size: ${holeWidth.toFixed(1)}x${holeHeight.toFixed(1)}mm, Spacing: ${holeSpacing.toFixed(1)}mm, Available space: W=${availableWidth.toFixed(1)}mm, D=${availableDepth.toFixed(1)}mm, H=${availableHeight.toFixed(1)}mm`);
   
   return ventHoles;
 }
