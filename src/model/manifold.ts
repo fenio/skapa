@@ -256,8 +256,7 @@ async function createVentHoles(
         [holeWidth/2 + tiltOffset, holeHeight/2], // Top right (45° tilted)
         [-holeWidth/2 + tiltOffset, holeHeight/2] // Top left (45° tilted)
       ]).extrude(bottom + 2) // Extrude through the bottom thickness
-        .rotate(180, 0, 0) // Rotate around X-axis to face downward
-        .translate(x, y, z);
+        .translate(x, y, z); // No rotation for now - test if holes appear
       ventHoles.push(bottomHole);
     }
   }
