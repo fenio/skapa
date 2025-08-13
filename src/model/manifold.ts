@@ -135,10 +135,10 @@ async function createVentHoles(
   const maxSpacing = 20; // Maximum spacing between holes
   
   // Calculate available space for holes on each side
-  // Add extra margin on back side to avoid clips
-  const backMargin = marginFromEdge + 15; // Extra space to avoid back clips
+  // Use full available depth; we'll bias placement forward separately
+  const backBiasClearance = 10; // mm to keep extra clearance on back if space allows
   const availableWidth = width - 2 * marginFromEdge;
-  const availableDepth = depth - marginFromEdge - backMargin; // Less space on back side
+  const availableDepth = depth - 2 * marginFromEdge;
   const availableHeight = height - bottom - 2 * marginFromEdge;
   
   // Ensure minimum available space for holes
@@ -175,17 +175,21 @@ async function createVentHoles(
   // Calculate 45-degree tilt offset (tan(45°) = 1, so offset = holeHeight)
   const tiltOffset = holeHeight; // This creates a true 45-degree angle
   
-  // Calculate number of holes that fit in each direction
-  const holesPerWidth = frontParams.holes;
-  const holesPerDepth = sideParams.holes;
-  const holesPerHeight = heightParams.holes;
+  // Calculate number of holes that fit in each direction based on final spacing
+  const holesPerWidth = Math.max(2, Math.floor((availableWidth - holeWidth) / holeSpacing) + 1);
+  const holesPerDepth = Math.max(2, Math.floor((availableDepth - holeWidth) / holeSpacing) + 1);
+  const holesPerHeight = Math.max(2, Math.floor((availableHeight - holeHeight) / holeSpacing) + 1);
   
   // Calculate consistent base height for all sides
   const baseHeight = bottom + marginFromEdge + 2; // Start holes lower
   
   // Calculate centering offsets for better alignment
   const totalSideHoleSpace = (holesPerDepth - 1) * holeSpacing + holeWidth;
-  const sideStartY = -depth / 2 + marginFromEdge + (availableDepth - totalSideHoleSpace) / 2;
+  const sideSlackY = Math.max(0, availableDepth - totalSideHoleSpace);
+  // Bias toward front by consuming more slack on the back side while respecting backBiasClearance
+  const backSlack = Math.max(0, Math.min(sideSlackY - backBiasClearance, sideSlackY));
+  const frontSlack = sideSlackY - backSlack;
+  const sideStartY = -depth / 2 + marginFromEdge + backSlack;
   
   const totalHeightHoleSpace = (holesPerHeight - 1) * holeSpacing + holeHeight;
   const heightStartZ = baseHeight + (availableHeight - totalHeightHoleSpace) / 2;
@@ -260,7 +264,9 @@ async function createVentHoles(
   const totalBottomHoleSpaceX = (holesPerWidth - 1) * holeSpacing + holeWidth;
   const bottomStartX = -width / 2 + marginFromEdge + (availableWidth - totalBottomHoleSpaceX) / 2;
   const totalBottomHoleSpaceY = (holesPerDepth - 1) * holeSpacing + holeWidth;
-  const bottomStartY = -depth / 2 + marginFromEdge + (availableDepth - totalBottomHoleSpaceY) / 2;
+  const bottomSlackY = Math.max(0, availableDepth - totalBottomHoleSpaceY);
+  const bottomBackSlack = Math.max(0, Math.min(bottomSlackY - backBiasClearance, bottomSlackY));
+  const bottomStartY = -depth / 2 + marginFromEdge + bottomBackSlack;
   
   for (let i = 0; i < holesPerWidth; i++) {
     for (let j = 0; j < holesPerDepth; j++) {
