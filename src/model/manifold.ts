@@ -120,16 +120,16 @@ async function createVentHoles(
   depth: number,
   wall: number,
   bottom: number,
-): Promise<Manifold[]> {
+): Promise<Manifold> {
   const manifold = await ManifoldModule.get();
 
   const EDGE_CLEARANCE = 3; // mm: hole must be at least this far from any wall edge
-  const MIN_GAP = 3; // mm: minimum spacing between adjacent holes
+  const MIN_GAP = 4; // mm: minimum spacing between adjacent holes (>= 3mm)
 
   // Hole rectangle dimensions (before rotation). "long" ≈ along local major axis
   // Use small rectangles tilted 45° from vertical. Keep consistent across all faces.
-  const HOLE_LONG = 5; // mm (example provided by user)
-  const HOLE_SHORT = 2; // mm
+  const HOLE_LONG = 7; // mm (slightly larger to reduce hole count)
+  const HOLE_SHORT = 3; // mm
 
   // Build a true rectangle and rotate it 45° in-plane to achieve tilt
   const hole2D = new manifold.CrossSection([
@@ -150,25 +150,42 @@ async function createVentHoles(
     holeSpan: number,
     edgeClearance: number,
     minGap: number,
+    maxAxisCount?: number,
   ): { positions: number[]; gapBetween: number } => {
     const usable = totalSpan - 2 * edgeClearance;
     if (usable < holeSpan) return { positions: [], gapBetween: 0 };
 
-    // Max holes with min gap between holes (edges fixed to edgeClearance)
-    const maxHoles = Math.max(
+    const maxHolesWithMinGap = Math.max(
       1,
       Math.floor((usable + minGap) / (holeSpan + minGap)),
     );
 
-    const baseUsed = maxHoles * holeSpan + (maxHoles - 1) * minGap;
+    let chosenCount = maxHolesWithMinGap;
+    let chosenGap = minGap;
+    if (maxAxisCount !== undefined && chosenCount > maxAxisCount) {
+      // Increase gap until we are at or below the axis cap
+      let trialGap = minGap;
+      while (chosenCount > maxAxisCount) {
+        trialGap += 1; // increase by 1mm steps
+        const count = Math.max(
+          1,
+          Math.floor((usable + trialGap) / (holeSpan + trialGap)),
+        );
+        chosenCount = count;
+        chosenGap = trialGap;
+        if (trialGap > 30) break; // safety stop
+      }
+    }
+
+    const baseUsed = chosenCount * holeSpan + (chosenCount - 1) * chosenGap;
     const leftover = Math.max(0, usable - baseUsed);
-    const gapBetween = maxHoles > 1 ? minGap + leftover / (maxHoles - 1) : 0;
+    const gapBetween = chosenCount > 1 ? chosenGap + leftover / (chosenCount - 1) : 0;
 
     const start = -totalSpan / 2 + edgeClearance + holeSpan / 2;
     const step = holeSpan + gapBetween;
 
     const positions: number[] = [];
-    for (let i = 0; i < maxHoles; i++) {
+    for (let i = 0; i < chosenCount; i++) {
       positions.push(start + i * step);
     }
     return { positions, gapBetween };
@@ -180,28 +197,50 @@ async function createVentHoles(
     holeSpan: number,
     edgeClearance: number,
     minGap: number,
+    maxAxisCount?: number,
   ): { positions: number[]; gapBetween: number } => {
     const usable = totalSpan - 2 * edgeClearance;
     if (usable < holeSpan) return { positions: [], gapBetween: 0 };
 
-    const maxHoles = Math.max(
+    const maxHolesWithMinGap = Math.max(
       1,
       Math.floor((usable + minGap) / (holeSpan + minGap)),
     );
 
-    const baseUsed = maxHoles * holeSpan + (maxHoles - 1) * minGap;
+    let chosenCount = maxHolesWithMinGap;
+    let chosenGap = minGap;
+    if (maxAxisCount !== undefined && chosenCount > maxAxisCount) {
+      let trialGap = minGap;
+      while (chosenCount > maxAxisCount) {
+        trialGap += 1;
+        const count = Math.max(
+          1,
+          Math.floor((usable + trialGap) / (holeSpan + trialGap)),
+        );
+        chosenCount = count;
+        chosenGap = trialGap;
+        if (trialGap > 30) break;
+      }
+    }
+
+    const baseUsed = chosenCount * holeSpan + (chosenCount - 1) * chosenGap;
     const leftover = Math.max(0, usable - baseUsed);
-    const gapBetween = maxHoles > 1 ? minGap + leftover / (maxHoles - 1) : 0;
+    const gapBetween = chosenCount > 1 ? chosenGap + leftover / (chosenCount - 1) : 0;
 
     const start = edgeClearance + holeSpan / 2; // measured from z=0 up to z=height
     const step = holeSpan + gapBetween;
 
     const positions: number[] = [];
-    for (let i = 0; i < maxHoles; i++) {
+    for (let i = 0; i < chosenCount; i++) {
       positions.push(start + i * step);
     }
     return { positions, gapBetween };
   };
+
+  // Axis caps to avoid huge grids that kill performance
+  const MAX_AXIS_COUNT_WIDTH = 12;
+  const MAX_AXIS_COUNT_DEPTH = 12;
+  const MAX_AXIS_COUNT_HEIGHT = 12;
 
   // Precompute positions along each axis
   const xPositionsFront = computeCenteredAxisPositions(
@@ -209,72 +248,91 @@ async function createVentHoles(
     HOLE_SPAN_PLANAR,
     EDGE_CLEARANCE,
     MIN_GAP,
+    MAX_AXIS_COUNT_WIDTH,
   ).positions;
   const yPositionsSide = computeCenteredAxisPositions(
     depth,
     HOLE_SPAN_PLANAR,
     EDGE_CLEARANCE,
     MIN_GAP,
+    MAX_AXIS_COUNT_DEPTH,
   ).positions;
   const zPositions = computeVerticalPositions(
     height,
     HOLE_SPAN_PLANAR,
     EDGE_CLEARANCE,
     MIN_GAP,
+    MAX_AXIS_COUNT_HEIGHT,
   ).positions;
 
   // Bottom face grid uses X and Y axes
   const xPositionsBottom = xPositionsFront;
   const yPositionsBottom = yPositionsSide;
 
-  const ventHoles: Manifold[] = [];
+  // Pre-extruded prisms for reuse
+  const wallPrism = hole2D.extrude(wall + 0.8); // small epsilon beyond thickness
+  const bottomPrism = hole2D.extrude(bottom + 0.8);
+
+  // Pre-rotated orientations
+  const leftPrism = wallPrism.rotate(0, 90, 0);
+  const rightPrism = wallPrism.rotate(0, -90, 0);
+  const frontPrism = wallPrism.rotate(90, 0, 0);
+
+  // Helpers to union arrays quickly
+  const unionAll = (parts: Manifold[]): Manifold | undefined => {
+    if (parts.length === 0) return undefined;
+    return parts.reduce((acc, cur) => (acc ? acc.add(cur) : cur));
+  };
 
   // Left side (x = -width/2). Extrude through wall thickness along X.
+  const leftHoles: Manifold[] = [];
   for (const y of yPositionsSide) {
     for (const z of zPositions) {
-      const hole = hole2D
-        .extrude(wall + 2)
-        .rotate(0, 90, 0)
-        .translate(-width / 2 - 1, y, z);
-      ventHoles.push(hole);
+      leftHoles.push(leftPrism.translate(-width / 2 - 1, y, z));
     }
   }
 
   // Right side (x = +width/2)
+  const rightHoles: Manifold[] = [];
   for (const y of yPositionsSide) {
     for (const z of zPositions) {
-      const hole = hole2D
-        .extrude(wall + 2)
-        .rotate(0, -90, 0)
-        .translate(width / 2 + 1, y, z);
-      ventHoles.push(hole);
+      rightHoles.push(rightPrism.translate(width / 2 + 1, y, z));
     }
   }
 
   // Front side (y = +depth/2)
+  const frontHoles: Manifold[] = [];
   for (const x of xPositionsFront) {
     for (const z of zPositions) {
-      const hole = hole2D
-        .extrude(wall + 2)
-        .rotate(90, 0, 0)
-        .translate(x, depth / 2 + 1, z);
-      ventHoles.push(hole);
+      frontHoles.push(frontPrism.translate(x, depth / 2 + 1, z));
     }
   }
 
   // Bottom face (z = 0 .. bottom). Extrude along Z through the bottom thickness
+  const bottomHoles: Manifold[] = [];
   for (const x of xPositionsBottom) {
     for (const y of yPositionsBottom) {
-      const hole = hole2D
-        .extrude(bottom + 2)
-        .translate(x, y, 0);
-      ventHoles.push(hole);
+      bottomHoles.push(bottomPrism.translate(x, y, 0));
     }
   }
 
   // No holes on the back side (y = -depth/2) to preserve connectors
 
-  return ventHoles;
+  const leftUnion = unionAll(leftHoles);
+  const rightUnion = unionAll(rightHoles);
+  const frontUnion = unionAll(frontHoles);
+  const bottomUnion = unionAll(bottomHoles);
+
+  const unions = [leftUnion, rightUnion, frontUnion, bottomUnion].filter(
+    (m): m is Manifold => m !== undefined,
+  );
+  if (unions.length === 0) {
+    // Return an empty solid by subtracting a translated version of itself; but easier: a zero-sized union is not supported.
+    // Fallback: create a tiny degenerate that won't affect subtraction; return a very small prism outside the model bounds.
+    return bottomPrism.translate(0, 0, -99999);
+  }
+  const allHoles = unions.reduce((acc, cur) => acc.add(cur));
+  return allHoles;
 }
 
 // The box (without clips) with origin in the middle of the bottom face
@@ -301,14 +359,9 @@ export async function base(
   
   // Try to add vent holes, but don't fail if it doesn't work
   try {
-    const ventHoles = await createVentHoles(height, width, depth, wall, bottom);
-    console.log("Vent holes created:", ventHoles.length);
-    
-    // Subtract all vent holes
-    for (const hole of ventHoles) {
-      result = result.subtract(hole);
-    }
-    console.log("Vent holes subtracted successfully");
+    const holeUnion = await createVentHoles(height, width, depth, wall, bottom);
+    result = result.subtract(holeUnion);
+    console.log("Vent holes subtracted successfully (single union)");
   } catch (error) {
     console.warn("Failed to create vent holes:", error);
     // Continue without vent holes if there's an error
