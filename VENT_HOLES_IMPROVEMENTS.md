@@ -12,8 +12,8 @@ This document describes the improvements made to the vent hole system in the SKA
 
 ### 2. **Bottom Side Vent Holes Added**
 - **Before**: No vent holes on the bottom side
-- **After**: Added rectangular vent holes on the bottom side in a grid pattern
-- **Benefit**: Improved airflow and ventilation from all directions
+- **After**: Added 45-degree tilted rectangular vent holes on the bottom side in a grid pattern
+- **Benefit**: Improved airflow and ventilation from all directions with consistent design
 
 ### 3. **Back Side Protection**
 - **Before**: Back side was already protected (no clips or holes)
@@ -46,7 +46,7 @@ The implementation leverages the Manifold 3D library for:
 
 1. **No Tilt Avoidance**: Consistent hole design means no need to avoid tilting during printing
 2. **Better Ventilation**: Holes on all sides (except back) provide comprehensive airflow
-3. **Uniform Appearance**: Consistent sizing creates a professional, uniform look
+3. **Uniform Appearance**: All holes use the same 45-degree tilted rectangular shape for professional consistency
 4. **Scalable Design**: Automatically adapts to different box sizes while maintaining proportions
 
 ## File Changes
