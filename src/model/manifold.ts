@@ -135,8 +135,10 @@ async function createVentHoles(
   const maxSpacing = 20; // Maximum spacing between holes
   
   // Calculate available space for holes on each side
+  // Add extra margin on back side to avoid clips
+  const backMargin = marginFromEdge + 15; // Extra space to avoid back clips
   const availableWidth = width - 2 * marginFromEdge;
-  const availableDepth = depth - 2 * marginFromEdge;
+  const availableDepth = depth - marginFromEdge - backMargin; // Less space on back side
   const availableHeight = height - bottom - 2 * marginFromEdge;
   
   // Ensure minimum available space for holes
@@ -181,12 +183,19 @@ async function createVentHoles(
   // Calculate consistent base height for all sides
   const baseHeight = bottom + marginFromEdge + 2; // Start holes lower
   
+  // Calculate centering offsets for better alignment
+  const totalSideHoleSpace = (holesPerDepth - 1) * holeSpacing + holeWidth;
+  const sideStartY = -depth / 2 + marginFromEdge + (availableDepth - totalSideHoleSpace) / 2;
+  
+  const totalHeightHoleSpace = (holesPerHeight - 1) * holeSpacing + holeHeight;
+  const heightStartZ = baseHeight + (availableHeight - totalHeightHoleSpace) / 2;
+  
   // Create holes on left side (depth x height grid)
   for (let i = 0; i < holesPerDepth; i++) {
     for (let j = 0; j < holesPerHeight; j++) {
       const x = -width / 2 - 1;
-      const y = -depth / 2 + marginFromEdge + i * holeSpacing;
-      const z = baseHeight + j * holeSpacing;
+      const y = sideStartY + i * holeSpacing;
+      const z = heightStartZ + j * holeSpacing;
       
       // Create a 45-degree tilted rectangle cross-section for left side
       const leftHole = new manifold.CrossSection([
@@ -205,8 +214,8 @@ async function createVentHoles(
   for (let i = 0; i < holesPerDepth; i++) {
     for (let j = 0; j < holesPerHeight; j++) {
       const x = width / 2 + 1;
-      const y = -depth / 2 + marginFromEdge + i * holeSpacing;
-      const z = baseHeight + j * holeSpacing;
+      const y = sideStartY + i * holeSpacing;
+      const z = heightStartZ + j * holeSpacing;
       
       // Create a 45-degree tilted rectangle cross-section for right side (opposite tilt)
       const rightHole = new manifold.CrossSection([
@@ -222,11 +231,15 @@ async function createVentHoles(
   }
   
   // Create holes on front side (width x height grid)
+  // Calculate centering for front side
+  const totalFrontHoleSpace = (holesPerWidth - 1) * holeSpacing + holeWidth;
+  const frontStartX = -width / 2 + marginFromEdge + (availableWidth - totalFrontHoleSpace) / 2;
+  
   for (let i = 0; i < holesPerWidth; i++) {
     for (let j = 0; j < holesPerHeight; j++) {
-      const x = -width / 2 + marginFromEdge + i * holeSpacing;
+      const x = frontStartX + i * holeSpacing;
       const y = depth / 2 + 1;
-      const z = baseHeight + j * holeSpacing - holeHeight/2; // Adjust for rotation offset
+      const z = heightStartZ + j * holeSpacing - holeHeight/2; // Adjust for rotation offset
       
       // Create a 45-degree tilted rectangle cross-section for front side
       const frontHole = new manifold.CrossSection([
@@ -243,10 +256,16 @@ async function createVentHoles(
   
   // Create holes on bottom side (width x depth grid)
   let bottomHoleCount = 0;
+  // Calculate centering for bottom side
+  const totalBottomHoleSpaceX = (holesPerWidth - 1) * holeSpacing + holeWidth;
+  const bottomStartX = -width / 2 + marginFromEdge + (availableWidth - totalBottomHoleSpaceX) / 2;
+  const totalBottomHoleSpaceY = (holesPerDepth - 1) * holeSpacing + holeWidth;
+  const bottomStartY = -depth / 2 + marginFromEdge + (availableDepth - totalBottomHoleSpaceY) / 2;
+  
   for (let i = 0; i < holesPerWidth; i++) {
     for (let j = 0; j < holesPerDepth; j++) {
-      const x = -width / 2 + marginFromEdge + i * holeSpacing;
-      const y = -depth / 2 + marginFromEdge + j * holeSpacing;
+      const x = bottomStartX + i * holeSpacing;
+      const y = bottomStartY + j * holeSpacing;
       const z = bottom / 2; // Position in the middle of the bottom thickness
       
       // Create a 45-degree tilted rectangle cross-section for bottom side (consistent with other sides)
