@@ -189,7 +189,7 @@ async function createVentHoles(
   // Bias toward front by consuming more slack on the back side while respecting backBiasClearance
   const backSlack = Math.max(0, Math.min(sideSlackY - backBiasClearance, sideSlackY));
   const frontSlack = sideSlackY - backSlack;
-  const sideStartY = -depth / 2 + marginFromEdge + backSlack;
+  const sideStartY = -depth / 2 + marginFromEdge + backSlack + 8; // Add extra margin from back
   
   const totalHeightHoleSpace = (holesPerHeight - 1) * holeSpacing + holeHeight;
   const heightStartZ = baseHeight + (availableHeight - totalHeightHoleSpace) / 2;
@@ -262,11 +262,11 @@ async function createVentHoles(
   let bottomHoleCount = 0;
   // Calculate centering for bottom side
   const totalBottomHoleSpaceX = (holesPerWidth - 1) * holeSpacing + holeWidth;
-  const bottomStartX = -width / 2 + marginFromEdge + (availableWidth - totalBottomHoleSpaceX) / 2;
+  const bottomStartX = -width / 2 + marginFromEdge + (availableWidth - totalBottomHoleSpaceX) / 2 + 8; // Add extra margin from left
   const totalBottomHoleSpaceY = (holesPerDepth - 1) * holeSpacing + holeWidth;
   const bottomSlackY = Math.max(0, availableDepth - totalBottomHoleSpaceY);
   const bottomBackSlack = Math.max(0, Math.min(bottomSlackY - backBiasClearance, bottomSlackY));
-  const bottomStartY = -depth / 2 + marginFromEdge + bottomBackSlack;
+  const bottomStartY = -depth / 2 + marginFromEdge + bottomBackSlack + 8; // Add extra margin from back
   
   for (let i = 0; i < holesPerWidth; i++) {
     for (let j = 0; j < holesPerDepth; j++) {
