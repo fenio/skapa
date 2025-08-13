@@ -120,6 +120,7 @@ async function createVentHoles(
   depth: number,
   wall: number,
   bottom: number,
+  radius: number,
 ): Promise<Manifold> {
   const manifold = await ManifoldModule.get();
 
@@ -266,8 +267,8 @@ async function createVentHoles(
   ).positions;
 
   // Bottom face grid uses X and Y axes
-  const xPositionsBottom = xPositionsFront;
-  const yPositionsBottom = yPositionsSide;
+  // const xPositionsBottom = xPositionsFront;
+  // const yPositionsBottom = yPositionsSide;
 
   // Pre-extruded prisms for reuse
   const wallPrism = hole2D.extrude(wall + 3); // ensure we pass completely through wall and slightly beyond
@@ -309,20 +310,41 @@ async function createVentHoles(
   }
 
   // Bottom face (z = 0 .. bottom). Extrude along Z through the bottom thickness
-  const bottomHoles: Manifold[] = [];
-  for (const x of xPositionsBottom) {
-    for (const y of yPositionsBottom) {
-      bottomHoles.push(bottomPrism.translate(x, y, 0));
-    }
-  }
+  // const bottomHoles: Manifold[] = [];
+  // for (const x of xPositionsBottom) {
+  //   for (const y of yPositionsBottom) {
+  //     bottomHoles.push(bottomPrism.translate(x, y, 0));
+  //   }
+  // }
+  
+  // Replace grid with a single large cutout inset by 5mm from inner walls, plus a central rib for stability
+  let bottomUnion: Manifold | undefined = undefined;
+  const BOTTOM_MARGIN = 5; // mm inset from inner walls
+  const RIB_WIDTH = 8; // mm width of central stability rib
+  const innerRadiusForBottom = Math.max(0, radius - wall);
+  const holeWidth = Math.max(0, width - 2 * (wall + BOTTOM_MARGIN));
+  const holeDepth = Math.max(0, depth - 2 * (wall + BOTTOM_MARGIN));
+  if (holeWidth > 0 && holeDepth > 0) {
+    const bottom2D = await roundedRectangle(
+      [holeWidth, holeDepth],
+      Math.max(0, innerRadiusForBottom - BOTTOM_MARGIN),
+    );
+    const fullBottomHole = bottom2D.extrude(bottom + 0.8);
 
-  // No holes on the back side (y = -depth/2) to preserve connectors
+    const rib2D = new manifold.CrossSection([
+      [-RIB_WIDTH / 2, -holeDepth / 2],
+      [RIB_WIDTH / 2, -holeDepth / 2],
+      [RIB_WIDTH / 2, holeDepth / 2],
+      [-RIB_WIDTH / 2, holeDepth / 2],
+    ]);
+    const ribPrism = rib2D.extrude(bottom + 0.8);
+
+    bottomUnion = fullBottomHole.subtract(ribPrism);
+  }
 
   const leftUnion = unionAll(leftHoles);
   const rightUnion = unionAll(rightHoles);
   const frontUnion = unionAll(frontHoles);
-  const bottomUnion = unionAll(bottomHoles);
-
   const unions = [leftUnion, rightUnion, frontUnion, bottomUnion].filter(
     (m): m is Manifold => m !== undefined,
   );
@@ -359,7 +381,7 @@ export async function base(
   
   // Try to add vent holes, but don't fail if it doesn't work
   try {
-    const holeUnion = await createVentHoles(height, width, depth, wall, bottom);
+    const holeUnion = await createVentHoles(height, width, depth, wall, bottom, radius);
     result = result.subtract(holeUnion);
     console.log("Vent holes subtracted successfully (single union)");
   } catch (error) {
