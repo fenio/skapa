@@ -23,9 +23,11 @@ This document describes the improvements made to the vent hole system in the SKA
 ## Technical Implementation
 
 ### Vent Hole Geometry
-- **Side holes**: 45-degree tilted rectangular holes for better airflow direction
-- **Bottom holes**: Simple rectangular holes (no tilt needed for bottom surface)
-- **Consistent sizing**: All holes use the same width and spacing parameters
+- **All holes**: 45-degree tilted rectangular holes for consistent airflow direction
+- **Side holes**: Tilted for optimal side ventilation
+- **Front holes**: Tilted for optimal front ventilation  
+- **Bottom holes**: Tilted and rotated 180° to face downward for optimal bottom ventilation
+- **Consistent sizing**: All holes use the same width, height, and spacing parameters
 - **Dynamic scaling**: Hole size and spacing automatically adjust based on box dimensions
 
 ### Manifold Library Usage
