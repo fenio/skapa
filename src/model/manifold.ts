@@ -122,150 +122,158 @@ async function createVentHoles(
   bottom: number,
 ): Promise<Manifold[]> {
   const manifold = await ManifoldModule.get();
-  
-  const ventHoles: Manifold[] = [];
-  
-  // Create dynamic vent holes based on box size
-  const marginFromEdge = 5; // 5mm from edges
-  const minHoleWidth = 3; // Minimum hole width
-  const maxHoleWidth = 6; // Maximum hole width
-  const minSpacing = 8; // Minimum spacing between holes
-  const maxSpacing = 20; // Maximum spacing between holes
-  
-  // Calculate available space for holes on each side
-  const availableWidth = width - 2 * marginFromEdge;
-  const availableDepth = depth - 2 * marginFromEdge;
-  const availableHeight = height - bottom - 2 * marginFromEdge;
-  
-  // Ensure minimum available space for holes
-  const minAvailableSpace = 8; // Minimum space needed for at least one hole
-  
-  // Calculate optimal hole size and spacing based on available space
-  const calculateOptimalSize = (availableSpace: number, minHoles: number = 1) => {
-    const maxHoles = Math.max(minHoles, Math.floor(availableSpace / minSpacing));
-    const optimalSpacing = Math.min(maxSpacing, Math.max(minSpacing, availableSpace / maxHoles));
-    const optimalHoleSize = Math.min(maxHoleWidth, Math.max(minHoleWidth, optimalSpacing * 0.3));
-    const actualHoles = Math.max(minHoles, Math.floor(availableSpace / optimalSpacing));
-    
-    // Ensure holes don't extend beyond the wall boundaries
-    const totalHoleSpace = (actualHoles - 1) * optimalSpacing + optimalHoleSize;
-    if (totalHoleSpace > availableSpace) {
-      // Reduce number of holes if they don't fit
-      const maxFittingHoles = Math.max(minHoles, Math.floor((availableSpace - optimalHoleSize) / optimalSpacing) + 1);
-      return { holeSize: optimalHoleSize, spacing: optimalSpacing, holes: maxFittingHoles };
+
+  const EDGE_CLEARANCE = 3; // mm: hole must be at least this far from any wall edge
+  const MIN_GAP = 3; // mm: minimum spacing between adjacent holes
+
+  // Hole rectangle dimensions (before rotation). "long" ≈ along local major axis
+  // Use small rectangles tilted 45° from vertical. Keep consistent across all faces.
+  const HOLE_LONG = 5; // mm (example provided by user)
+  const HOLE_SHORT = 2; // mm
+
+  // Build a true rectangle and rotate it 45° in-plane to achieve tilt
+  const hole2D = new manifold.CrossSection([
+    [-HOLE_LONG / 2, -HOLE_SHORT / 2],
+    [HOLE_LONG / 2, -HOLE_SHORT / 2],
+    [HOLE_LONG / 2, HOLE_SHORT / 2],
+    [-HOLE_LONG / 2, HOLE_SHORT / 2],
+  ]).rotate(45); // 2D rotation (degrees)
+
+  // For a rectangle rotated by 45°, the axis-aligned span along either in-plane axis
+  // equals (w*cos45 + h*sin45) = (w + h)/sqrt(2)
+  const SQRT2 = Math.SQRT2;
+  const HOLE_SPAN_PLANAR = (HOLE_LONG + HOLE_SHORT) / SQRT2; // mm, along either axis on the face plane
+
+  // Compute evenly distributed positions along an axis centered at 0 (e.g., X or Y axes)
+  const computeCenteredAxisPositions = (
+    totalSpan: number,
+    holeSpan: number,
+    edgeClearance: number,
+    minGap: number,
+  ): { positions: number[]; gapBetween: number } => {
+    const usable = totalSpan - 2 * edgeClearance;
+    if (usable < holeSpan) return { positions: [], gapBetween: 0 };
+
+    // Max holes with min gap between holes (edges fixed to edgeClearance)
+    const maxHoles = Math.max(
+      1,
+      Math.floor((usable + minGap) / (holeSpan + minGap)),
+    );
+
+    const baseUsed = maxHoles * holeSpan + (maxHoles - 1) * minGap;
+    const leftover = Math.max(0, usable - baseUsed);
+    const gapBetween = maxHoles > 1 ? minGap + leftover / (maxHoles - 1) : 0;
+
+    const start = -totalSpan / 2 + edgeClearance + holeSpan / 2;
+    const step = holeSpan + gapBetween;
+
+    const positions: number[] = [];
+    for (let i = 0; i < maxHoles; i++) {
+      positions.push(start + i * step);
     }
-    
-    return { holeSize: optimalHoleSize, spacing: optimalSpacing, holes: actualHoles };
+    return { positions, gapBetween };
   };
-  
-  // Calculate optimal parameters for each side
-  const frontParams = calculateOptimalSize(Math.max(availableWidth, minAvailableSpace), 2);
-  const sideParams = calculateOptimalSize(Math.max(availableDepth, minAvailableSpace), 2);
-  const heightParams = calculateOptimalSize(Math.max(availableHeight, minAvailableSpace), 2);
-  const bottomParams = calculateOptimalSize(Math.max(availableWidth, minAvailableSpace), 2);
-  
-  // Use consistent hole size across all sides for uniform appearance
-  const holeWidth = Math.min(frontParams.holeSize, sideParams.holeSize, bottomParams.holeSize);
-  const holeHeight = heightParams.holeSize * 2; // Make height 2x the width for good proportions
-  const holeSpacing = Math.min(frontParams.spacing, sideParams.spacing, heightParams.spacing, bottomParams.spacing);
-  
-  // Calculate 45-degree tilt offset (tan(45°) = 1, so offset = holeHeight)
-  const tiltOffset = holeHeight; // This creates a true 45-degree angle
-  
-  // Calculate number of holes that fit in each direction
-  const holesPerWidth = frontParams.holes;
-  const holesPerDepth = sideParams.holes;
-  const holesPerHeight = heightParams.holes;
-  const holesPerBottomWidth = bottomParams.holes;
-  const holesPerBottomDepth = Math.max(1, Math.floor(availableDepth / holeSpacing));
-  
-  // Calculate consistent base height for all sides
-  const baseHeight = bottom + marginFromEdge + 2; // Start holes lower
-  
-  // Create holes on left side (depth x height grid)
-  for (let i = 0; i < holesPerDepth; i++) {
-    for (let j = 0; j < holesPerHeight; j++) {
-      const x = -width / 2 - 1;
-      const y = -depth / 2 + marginFromEdge + i * holeSpacing;
-      const z = baseHeight + j * holeSpacing;
-      
-      // Create a 45-degree tilted rectangle cross-section for left side
-      const leftHole = new manifold.CrossSection([
-        [-holeWidth/2, -holeHeight/2], // Bottom left
-        [holeWidth/2, -holeHeight/2], // Bottom right
-        [holeWidth/2 + tiltOffset, holeHeight/2], // Top right (45° tilted)
-        [-holeWidth/2 + tiltOffset, holeHeight/2] // Top left (45° tilted)
-      ]).extrude(wall + 2)
-        .rotate(0, 90, 0) // Rotate around Y-axis to face left
-        .translate(x, y, z);
-      ventHoles.push(leftHole);
+
+  // Compute evenly distributed positions along Z from 0..height
+  const computeVerticalPositions = (
+    totalSpan: number,
+    holeSpan: number,
+    edgeClearance: number,
+    minGap: number,
+  ): { positions: number[]; gapBetween: number } => {
+    const usable = totalSpan - 2 * edgeClearance;
+    if (usable < holeSpan) return { positions: [], gapBetween: 0 };
+
+    const maxHoles = Math.max(
+      1,
+      Math.floor((usable + minGap) / (holeSpan + minGap)),
+    );
+
+    const baseUsed = maxHoles * holeSpan + (maxHoles - 1) * minGap;
+    const leftover = Math.max(0, usable - baseUsed);
+    const gapBetween = maxHoles > 1 ? minGap + leftover / (maxHoles - 1) : 0;
+
+    const start = edgeClearance + holeSpan / 2; // measured from z=0 up to z=height
+    const step = holeSpan + gapBetween;
+
+    const positions: number[] = [];
+    for (let i = 0; i < maxHoles; i++) {
+      positions.push(start + i * step);
+    }
+    return { positions, gapBetween };
+  };
+
+  // Precompute positions along each axis
+  const xPositionsFront = computeCenteredAxisPositions(
+    width,
+    HOLE_SPAN_PLANAR,
+    EDGE_CLEARANCE,
+    MIN_GAP,
+  ).positions;
+  const yPositionsSide = computeCenteredAxisPositions(
+    depth,
+    HOLE_SPAN_PLANAR,
+    EDGE_CLEARANCE,
+    MIN_GAP,
+  ).positions;
+  const zPositions = computeVerticalPositions(
+    height,
+    HOLE_SPAN_PLANAR,
+    EDGE_CLEARANCE,
+    MIN_GAP,
+  ).positions;
+
+  // Bottom face grid uses X and Y axes
+  const xPositionsBottom = xPositionsFront;
+  const yPositionsBottom = yPositionsSide;
+
+  const ventHoles: Manifold[] = [];
+
+  // Left side (x = -width/2). Extrude through wall thickness along X.
+  for (const y of yPositionsSide) {
+    for (const z of zPositions) {
+      const hole = hole2D
+        .extrude(wall + 2)
+        .rotate(0, 90, 0)
+        .translate(-width / 2 - 1, y, z);
+      ventHoles.push(hole);
     }
   }
-  
-  // Create holes on right side (depth x height grid)
-  for (let i = 0; i < holesPerDepth; i++) {
-    for (let j = 0; j < holesPerHeight; j++) {
-      const x = width / 2 + 1;
-      const y = -depth / 2 + marginFromEdge + i * holeSpacing;
-      const z = baseHeight + j * holeSpacing;
-      
-      // Create a 45-degree tilted rectangle cross-section for right side (opposite tilt)
-      const rightHole = new manifold.CrossSection([
-        [-holeWidth/2, -holeHeight/2], // Bottom left
-        [holeWidth/2, -holeHeight/2], // Bottom right
-        [holeWidth/2 - tiltOffset, holeHeight/2], // Top right (45° tilted opposite)
-        [-holeWidth/2 - tiltOffset, holeHeight/2] // Top left (45° tilted opposite)
-      ]).extrude(wall + 2)
-        .rotate(0, -90, 0) // Rotate around Y-axis to face right
-        .translate(x, y, z);
-      ventHoles.push(rightHole);
+
+  // Right side (x = +width/2)
+  for (const y of yPositionsSide) {
+    for (const z of zPositions) {
+      const hole = hole2D
+        .extrude(wall + 2)
+        .rotate(0, -90, 0)
+        .translate(width / 2 + 1, y, z);
+      ventHoles.push(hole);
     }
   }
-  
-  // Create holes on front side (width x height grid)
-  for (let i = 0; i < holesPerWidth; i++) {
-    for (let j = 0; j < holesPerHeight; j++) {
-      const x = -width / 2 + marginFromEdge + i * holeSpacing;
-      const y = depth / 2 + 1;
-      const z = baseHeight + j * holeSpacing - holeHeight/2; // Adjust for rotation offset
-      
-      // Create a 45-degree tilted rectangle cross-section for front side
-      const frontHole = new manifold.CrossSection([
-        [-holeWidth/2, -holeHeight/2], // Bottom left
-        [holeWidth/2, -holeHeight/2], // Bottom right
-        [holeWidth/2 + tiltOffset, holeHeight/2], // Top right (45° tilted)
-        [-holeWidth/2 + tiltOffset, holeHeight/2] // Top left (45° tilted)
-      ]).extrude(wall + 2)
-        .rotate(90, 0, 0) // Rotate around X-axis to face front
-        .translate(x, y, z);
-      ventHoles.push(frontHole);
+
+  // Front side (y = +depth/2)
+  for (const x of xPositionsFront) {
+    for (const z of zPositions) {
+      const hole = hole2D
+        .extrude(wall + 2)
+        .rotate(90, 0, 0)
+        .translate(x, depth / 2 + 1, z);
+      ventHoles.push(hole);
     }
   }
-  
-  // Create holes on bottom side (width x depth grid) - NEW!
-  for (let i = 0; i < holesPerBottomWidth; i++) {
-    for (let j = 0; j < holesPerBottomDepth; j++) {
-      const x = -width / 2 + marginFromEdge + i * holeSpacing;
-      const y = -depth / 2 + marginFromEdge + j * holeSpacing;
-      const z = 0; // Position at the bottom surface (z=0 is the bottom)
-      
-      // Create a 45-degree tilted rectangle cross-section for bottom side (consistent with other sides)
-      const bottomHole = new manifold.CrossSection([
-        [-holeWidth/2, -holeHeight/2], // Bottom left
-        [holeWidth/2, -holeHeight/2], // Bottom right
-        [holeWidth/2 + tiltOffset, holeHeight/2], // Top right (45° tilted)
-        [-holeWidth/2 + tiltOffset, holeHeight/2] // Top left (45° tilted)
-      ]).extrude(bottom + 2) // Extrude through the bottom thickness
-        .translate(x, y, z); // No rotation for now - test if holes appear
-      ventHoles.push(bottomHole);
+
+  // Bottom face (z = 0 .. bottom). Extrude along Z through the bottom thickness
+  for (const x of xPositionsBottom) {
+    for (const y of yPositionsBottom) {
+      const hole = hole2D
+        .extrude(bottom + 2)
+        .translate(x, y, 0);
+      ventHoles.push(hole);
     }
   }
-  
-  // NO BACK SIDE HOLES - back side has connectors and should remain untouched
-  
-  console.log(`Created ${ventHoles.length} consistent vent holes (${holesPerWidth}x${holesPerHeight} on front, ${holesPerDepth}x${holesPerHeight} on sides, ${holesPerBottomWidth}x${holesPerBottomDepth} on bottom) - Hole size: ${holeWidth.toFixed(1)}x${holeHeight.toFixed(1)}mm, Spacing: ${holeSpacing.toFixed(1)}mm, Available space: W=${availableWidth.toFixed(1)}mm, D=${availableDepth.toFixed(1)}mm, H=${availableHeight.toFixed(1)}mm`);
-  console.log(`Bottom holes: ${holesPerBottomWidth}x${holesPerBottomDepth} = ${holesPerBottomWidth * holesPerBottomDepth} holes at z=0`);
-  
+
+  // No holes on the back side (y = -depth/2) to preserve connectors
+
   return ventHoles;
 }
 
