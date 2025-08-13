@@ -113,7 +113,7 @@ export async function clips(
   return [clipR.trimByPlane(n, 0), clipL.trimByPlane(n, 0)];
 }
 
-// Create one simple rectangular hole on each side (left, right, front)
+// Create one simple rectangular hole on each side (left, right, front, bottom)
 async function createVentHoles(
   height: number,
   width: number,
@@ -164,6 +164,8 @@ async function createVentHoles(
   const frontParams = calculateOptimalSize(Math.max(availableWidth, minAvailableSpace), 2);
   const sideParams = calculateOptimalSize(Math.max(availableDepth, minAvailableSpace), 2);
   const heightParams = calculateOptimalSize(Math.max(availableHeight, minAvailableSpace), 2);
+  const bottomParams = calculateOptimalSize(Math.max(availableWidth, minAvailableSpace), 2);
+  const bottomDepthParams = calculateOptimalSize(Math.max(availableDepth, minAvailableSpace), 2);
   
   // Use the smaller of front/side hole sizes for consistency
   const holeWidth = Math.min(frontParams.holeSize, sideParams.holeSize);
@@ -177,6 +179,8 @@ async function createVentHoles(
   const holesPerWidth = frontParams.holes;
   const holesPerDepth = sideParams.holes;
   const holesPerHeight = heightParams.holes;
+  const holesPerBottomWidth = bottomParams.holes;
+  const holesPerBottomDepth = bottomDepthParams.holes;
   
   // Calculate consistent base height for all sides
   const baseHeight = bottom + marginFromEdge + 2; // Start holes lower
@@ -241,9 +245,28 @@ async function createVentHoles(
     }
   }
   
+  // Create holes on bottom side (width x depth grid)
+  for (let i = 0; i < holesPerBottomWidth; i++) {
+    for (let j = 0; j < holesPerBottomDepth; j++) {
+      const x = -width / 2 + marginFromEdge + i * holeSpacing;
+      const y = -depth / 2 + marginFromEdge + j * holeSpacing;
+      const z = bottom - 1; // Position at bottom surface
+      
+      // Create a simple rectangular hole for bottom side (no tilt needed)
+      const bottomHole = new manifold.CrossSection([
+        [-holeWidth/2, -holeWidth/2], // Bottom left
+        [holeWidth/2, -holeWidth/2], // Bottom right
+        [holeWidth/2, holeWidth/2], // Top right
+        [-holeWidth/2, holeWidth/2] // Top left
+      ]).extrude(bottom + 2) // Extrude through the bottom thickness
+        .translate(x, y, z);
+      ventHoles.push(bottomHole);
+    }
+  }
+  
   // NO BACK SIDE HOLES - back side has connectors and should remain untouched
   
-  console.log(`Created ${ventHoles.length} dynamic 45-degree slash-shaped vent holes (${holesPerWidth}x${holesPerHeight} on front, ${holesPerDepth}x${holesPerHeight} on sides) - Hole size: ${holeWidth.toFixed(1)}x${holeHeight.toFixed(1)}mm, Spacing: ${holeSpacing.toFixed(1)}mm, Available space: W=${availableWidth.toFixed(1)}mm, D=${availableDepth.toFixed(1)}mm, H=${availableHeight.toFixed(1)}mm`);
+  console.log(`Created ${ventHoles.length} dynamic vent holes (${holesPerWidth}x${holesPerHeight} on front, ${holesPerDepth}x${holesPerHeight} on sides, ${holesPerBottomWidth}x${holesPerBottomDepth} on bottom) - Hole size: ${holeWidth.toFixed(1)}x${holeHeight.toFixed(1)}mm, Spacing: ${holeSpacing.toFixed(1)}mm, Available space: W=${availableWidth.toFixed(1)}mm, D=${availableDepth.toFixed(1)}mm, H=${availableHeight.toFixed(1)}mm`);
   
   return ventHoles;
 }
