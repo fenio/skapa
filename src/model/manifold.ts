@@ -332,10 +332,10 @@ async function createVentHoles(
     const fullBottomHole = bottom2D.extrude(bottom + 0.8);
 
     const rib2D = new manifold.CrossSection([
-      [-holeWidth / 2, -RIB_WIDTH / 2],
-      [holeWidth / 2, -RIB_WIDTH / 2],
-      [holeWidth / 2, RIB_WIDTH / 2],
-      [-holeWidth / 2, RIB_WIDTH / 2],
+      [-RIB_WIDTH / 2, -holeDepth / 2],
+      [RIB_WIDTH / 2, -holeDepth / 2],
+      [RIB_WIDTH / 2, holeDepth / 2],
+      [-RIB_WIDTH / 2, holeDepth / 2],
     ]);
     const ribPrism = rib2D.extrude(bottom + 0.8);
 
