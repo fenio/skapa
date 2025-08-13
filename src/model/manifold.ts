@@ -276,7 +276,7 @@ async function createVentHoles(
   // Pre-rotated orientations
   const leftPrism = wallPrism.rotate(0, 90, 0);
   const rightPrism = wallPrism.rotate(0, -90, 0);
-  const frontPrism = wallPrism.rotate(-90, 0, 0); // extrude inward (toward -Y)
+  const frontPrism = wallPrism.rotate(90, 0, 0); // extrude inward toward -Y with our translation at +Y
 
   // Helpers to union arrays quickly
   const unionAll = (parts: Manifold[]): Manifold | undefined => {
