@@ -270,13 +270,13 @@ async function createVentHoles(
   const yPositionsBottom = yPositionsSide;
 
   // Pre-extruded prisms for reuse
-  const wallPrism = hole2D.extrude(wall + 0.8); // small epsilon beyond thickness
+  const wallPrism = hole2D.extrude(wall + 3); // ensure we pass completely through wall and slightly beyond
   const bottomPrism = hole2D.extrude(bottom + 0.8);
 
   // Pre-rotated orientations
   const leftPrism = wallPrism.rotate(0, 90, 0);
   const rightPrism = wallPrism.rotate(0, -90, 0);
-  const frontPrism = wallPrism.rotate(90, 0, 0);
+  const frontPrism = wallPrism.rotate(-90, 0, 0); // extrude inward (toward -Y)
 
   // Helpers to union arrays quickly
   const unionAll = (parts: Manifold[]): Manifold | undefined => {
