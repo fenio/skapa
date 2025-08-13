@@ -241,9 +241,29 @@ async function createVentHoles(
     }
   }
   
+  // Create holes on bottom side (width x depth grid)
+  for (let i = 0; i < holesPerWidth; i++) {
+    for (let j = 0; j < holesPerDepth; j++) {
+      const x = -width / 2 + marginFromEdge + i * holeSpacing;
+      const y = -depth / 2 + marginFromEdge + j * holeSpacing;
+      const z = bottom + 1; // Position at bottom of the box
+      
+      // Create a simple rectangular hole for bottom side (no tilt needed)
+      const bottomHole = new manifold.CrossSection([
+        [-holeWidth/2, -holeWidth/2], // Bottom left
+        [holeWidth/2, -holeWidth/2], // Bottom right
+        [holeWidth/2, holeWidth/2], // Top right
+        [-holeWidth/2, holeWidth/2] // Top left
+      ]).extrude(bottom + 2)
+        .rotate(0, 0, 0) // No rotation needed for bottom
+        .translate(x, y, z);
+      ventHoles.push(bottomHole);
+    }
+  }
+  
   // NO BACK SIDE HOLES - back side has connectors and should remain untouched
   
-  console.log(`Created ${ventHoles.length} dynamic 45-degree slash-shaped vent holes (${holesPerWidth}x${holesPerHeight} on front, ${holesPerDepth}x${holesPerHeight} on sides) - Hole size: ${holeWidth.toFixed(1)}x${holeHeight.toFixed(1)}mm, Spacing: ${holeSpacing.toFixed(1)}mm, Available space: W=${availableWidth.toFixed(1)}mm, D=${availableDepth.toFixed(1)}mm, H=${availableHeight.toFixed(1)}mm`);
+  console.log(`Created ${ventHoles.length} dynamic vent holes (${holesPerWidth}x${holesPerHeight} on front, ${holesPerDepth}x${holesPerHeight} on sides, ${holesPerWidth}x${holesPerDepth} on bottom) - Hole size: ${holeWidth.toFixed(1)}x${holeHeight.toFixed(1)}mm, Spacing: ${holeSpacing.toFixed(1)}mm, Available space: W=${availableWidth.toFixed(1)}mm, D=${availableDepth.toFixed(1)}mm, H=${availableHeight.toFixed(1)}mm`);
   
   return ventHoles;
 }
