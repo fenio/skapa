@@ -162,6 +162,23 @@ async function createVentHoles(
     return { holeSize: optimalHoleSize, spacing: optimalSpacing, holes: actualHoles };
   };
   
+  // Calculate perfect spacing for even distribution
+  const calculatePerfectSpacing = (availableSpace: number, holeSize: number, minHoles: number = 2) => {
+    // For perfect distribution: (holes - 1) * spacing + holeSize = availableSpace
+    // Therefore: spacing = (availableSpace - holeSize) / (holes - 1)
+    const maxPossibleHoles = Math.floor((availableSpace - holeSize) / minSpacing) + 1;
+    const optimalHoles = Math.max(minHoles, Math.min(maxPossibleHoles, Math.floor(availableSpace / (holeSize + minSpacing))));
+    
+    if (optimalHoles <= 1) {
+      return { holes: 1, spacing: availableSpace / 2, startOffset: (availableSpace - holeSize) / 2 };
+    }
+    
+    const perfectSpacing = (availableSpace - holeSize) / (optimalHoles - 1);
+    const startOffset = 0; // Start from the edge margin
+    
+    return { holes: optimalHoles, spacing: perfectSpacing, startOffset };
+  };
+  
   // Calculate optimal parameters for each side
   const frontParams = calculateOptimalSize(Math.max(availableWidth, minAvailableSpace), 2);
   const sideParams = calculateOptimalSize(Math.max(availableDepth, minAvailableSpace), 2);
@@ -170,36 +187,32 @@ async function createVentHoles(
   // Use the smaller of front/side hole sizes for consistency
   const holeWidth = Math.min(frontParams.holeSize, sideParams.holeSize);
   const holeHeight = heightParams.holeSize * 2; // Make height 2x the width for good proportions
-  const holeSpacing = Math.min(frontParams.spacing, sideParams.spacing, heightParams.spacing);
   
   // Calculate 45-degree tilt offset (tan(45°) = 1, so offset = holeHeight)
   const tiltOffset = holeHeight; // This creates a true 45-degree angle
   
-  // Calculate number of holes that fit in each direction based on final spacing
-  const holesPerWidth = Math.max(2, Math.floor((availableWidth - holeWidth) / holeSpacing) + 1);
-  const holesPerDepth = Math.max(2, Math.floor((availableDepth - holeWidth) / holeSpacing) + 1);
-  const holesPerHeight = Math.max(2, Math.floor((availableHeight - holeHeight) / holeSpacing) + 1);
+  // Calculate perfect spacing for each direction
+  const frontSpacing = calculatePerfectSpacing(availableWidth, holeWidth, 2);
+  const sideSpacing = calculatePerfectSpacing(availableDepth, holeWidth, 2);
+  const heightSpacing = calculatePerfectSpacing(availableHeight, holeHeight, 2);
+  
+  const holesPerWidth = frontSpacing.holes;
+  const holesPerDepth = sideSpacing.holes;
+  const holesPerHeight = heightSpacing.holes;
   
   // Calculate consistent base height for all sides
   const baseHeight = bottom + marginFromEdge + 2; // Start holes lower
   
-  // Calculate centering offsets for better alignment
-  const totalSideHoleSpace = (holesPerDepth - 1) * holeSpacing + holeWidth;
-  const sideSlackY = Math.max(0, availableDepth - totalSideHoleSpace);
-  // Bias toward front by consuming more slack on the back side while respecting backBiasClearance
-  const backSlack = Math.max(0, Math.min(sideSlackY - backBiasClearance, sideSlackY));
-  const frontSlack = sideSlackY - backSlack;
-  const sideStartY = -depth / 2 + marginFromEdge + backSlack + 8; // Add extra margin from back
-  
-  const totalHeightHoleSpace = (holesPerHeight - 1) * holeSpacing + holeHeight;
-  const heightStartZ = baseHeight + (availableHeight - totalHeightHoleSpace) / 2;
+  // Calculate perfect positioning for each side
+  const sideStartY = -depth / 2 + marginFromEdge + sideSpacing.startOffset + 8; // Add extra margin from back
+  const heightStartZ = baseHeight + heightSpacing.startOffset;
   
   // Create holes on left side (depth x height grid)
   for (let i = 0; i < holesPerDepth; i++) {
     for (let j = 0; j < holesPerHeight; j++) {
       const x = -width / 2 - 1;
-      const y = sideStartY + i * holeSpacing;
-      const z = heightStartZ + j * holeSpacing;
+      const y = sideStartY + i * sideSpacing.spacing;
+      const z = heightStartZ + j * heightSpacing.spacing;
       
       // Create a 45-degree tilted rectangle cross-section for left side
       const leftHole = new manifold.CrossSection([
@@ -218,8 +231,8 @@ async function createVentHoles(
   for (let i = 0; i < holesPerDepth; i++) {
     for (let j = 0; j < holesPerHeight; j++) {
       const x = width / 2 + 1;
-      const y = sideStartY + i * holeSpacing;
-      const z = heightStartZ + j * holeSpacing;
+      const y = sideStartY + i * sideSpacing.spacing;
+      const z = heightStartZ + j * heightSpacing.spacing;
       
       // Create a 45-degree tilted rectangle cross-section for right side (opposite tilt)
       const rightHole = new manifold.CrossSection([
@@ -235,15 +248,13 @@ async function createVentHoles(
   }
   
   // Create holes on front side (width x height grid)
-  // Calculate centering for front side
-  const totalFrontHoleSpace = (holesPerWidth - 1) * holeSpacing + holeWidth;
-  const frontStartX = -width / 2 + marginFromEdge + (availableWidth - totalFrontHoleSpace) / 2;
+  const frontStartX = -width / 2 + marginFromEdge + frontSpacing.startOffset;
   
   for (let i = 0; i < holesPerWidth; i++) {
     for (let j = 0; j < holesPerHeight; j++) {
-      const x = frontStartX + i * holeSpacing;
+      const x = frontStartX + i * frontSpacing.spacing;
       const y = depth / 2 + 1;
-      const z = heightStartZ + j * holeSpacing - holeHeight/2; // Adjust for rotation offset
+      const z = heightStartZ + j * heightSpacing.spacing - holeHeight/2; // Adjust for rotation offset
       
       // Create a 45-degree tilted rectangle cross-section for front side
       const frontHole = new manifold.CrossSection([
@@ -260,18 +271,13 @@ async function createVentHoles(
   
   // Create holes on bottom side (width x depth grid)
   let bottomHoleCount = 0;
-  // Calculate centering for bottom side
-  const totalBottomHoleSpaceX = (holesPerWidth - 1) * holeSpacing + holeWidth;
-  const bottomStartX = -width / 2 + marginFromEdge + (availableWidth - totalBottomHoleSpaceX) / 2 + 8; // Add extra margin from left
-  const totalBottomHoleSpaceY = (holesPerDepth - 1) * holeSpacing + holeWidth;
-  const bottomSlackY = Math.max(0, availableDepth - totalBottomHoleSpaceY);
-  const bottomBackSlack = Math.max(0, Math.min(bottomSlackY - backBiasClearance, bottomSlackY));
-  const bottomStartY = -depth / 2 + marginFromEdge + bottomBackSlack + 8; // Add extra margin from back
+  const bottomStartX = -width / 2 + marginFromEdge + frontSpacing.startOffset + 8; // Add extra margin from left
+  const bottomStartY = -depth / 2 + marginFromEdge + sideSpacing.startOffset + 8; // Add extra margin from back
   
   for (let i = 0; i < holesPerWidth; i++) {
     for (let j = 0; j < holesPerDepth; j++) {
-      const x = bottomStartX + i * holeSpacing;
-      const y = bottomStartY + j * holeSpacing;
+      const x = bottomStartX + i * frontSpacing.spacing;
+      const y = bottomStartY + j * sideSpacing.spacing;
       const z = bottom / 2; // Position in the middle of the bottom thickness
       
       // Create a 45-degree tilted rectangle cross-section for bottom side (consistent with other sides)
